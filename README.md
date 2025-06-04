@@ -65,5 +65,7 @@ if (success) {
 Thanks for all the great open-source projects that were used in this project:
 
 FFTW3 https://github.com/FFTW/fftw3
+
 RTL-SDR (modified) https://github.com/osmocom/rtl-sdr.git
+
 libusb  https://github.com/libusb/libusb.git
