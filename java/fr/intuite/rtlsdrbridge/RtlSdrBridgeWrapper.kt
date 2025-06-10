@@ -49,6 +49,7 @@ object RtlSdrBridgeWrapper {
         fftCallback: (FloatArray) -> Unit,
         signalStrengthCallback: (Int) -> Unit,
         peakCallback: (Float) -> Unit,
+        peakNormalizedCallback: (Float) -> Unit,
         peakFrequencyCallback: (Long) -> Unit
     )
 

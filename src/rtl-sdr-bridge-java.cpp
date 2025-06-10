@@ -100,6 +100,8 @@ static jobject strengthCallbackObj = nullptr; // Global reference to the callbac
 static jmethodID strengthCallbackMethod = nullptr; // Method ID for the callback
 static jobject peakCallbackObj = nullptr; // Global reference to the callback
 static jmethodID peakCallbackMethod = nullptr; // Method ID for the callback
+static jobject peakNormalizedCallbackObj = nullptr; // Global reference to the callback
+static jmethodID peakNormalizedCallbackMethod = nullptr; // Method ID for the callback
 static jobject peakFrequencyCallbackObj = nullptr; // Global reference to the callback
 static jmethodID peakFrequencyCallbackMethod = nullptr; // Method ID for the callback
 static bool isRunning = false;
@@ -235,6 +237,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         jobject fftCallback,
         jobject signalStrengthCallback,
         jobject peakCallback,
+        jobject peakNormalizedCallback,
         jobject peakFrequencyCallback) {
 
     if (dev == nullptr) {
@@ -254,6 +257,10 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
     peakCallbackObj = env->NewGlobalRef(peakCallback);
     jclass peakCallbackClass = env->GetObjectClass(peakCallback);
     peakCallbackMethod = env->GetMethodID(peakCallbackClass, "invoke","(F)V");
+
+    peakNormalizedCallbackObj = env->NewGlobalRef(peakNormalizedCallback);
+    jclass peakNormalizedCallbackClass = env->GetObjectClass(peakNormalizedCallback);
+    peakNormalizedCallbackMethod = env->GetMethodID(peakNormalizedCallbackClass, "invoke","(F)V");
 
     peakFrequencyCallbackObj = env->NewGlobalRef(peakFrequencyCallback);
     jclass peakFrequencyCallbackClass = env->GetObjectClass(peakFrequencyCallback);
@@ -797,6 +804,8 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         float peakRemanantMax = *peakRemanantMaxIter ;
         // Send peak of signal to Java
         env->CallVoidMethod(peakCallbackObj, peakCallbackMethod, peakRemanantMax);
+        // Send normalized peak of signal to Java
+        env->CallVoidMethod(peakNormalizedCallbackObj, peakNormalizedCallbackMethod, peakRemanantMax);
         // Send new frequency tracking to Java
         env->CallVoidMethod(peakFrequencyCallbackObj, peakFrequencyCallbackMethod, static_cast<long>(std::round(trackingFrequency)));
 
@@ -844,6 +853,10 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeCloseRTL(JNIEnv *env, job
     if (peakCallbackObj != nullptr) {
         env->DeleteGlobalRef(peakCallbackObj);
         peakCallbackObj = nullptr;
+    }
+    if (peakNormalizedCallbackObj != nullptr) {
+        env->DeleteGlobalRef(peakNormalizedCallbackObj);
+        peakNormalizedCallbackObj = nullptr;
     }
     if (result != nullptr) {
         env->DeleteGlobalRef(result);
