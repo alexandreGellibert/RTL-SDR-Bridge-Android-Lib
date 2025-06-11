@@ -212,6 +212,7 @@ static int noiseBufferSize = 15 ;
 static int indexNoiseBuffer = 0 ;
 //Level 1 variables
 static std::vector<float> peakBuffer ;
+static std::vector<float> peakNormalizedBuffer ;
 static int peakRemanance = 50 ;
 static int indexPeakBuffer = 0 ;
 //Level 2 variables
@@ -408,6 +409,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         float total_integrated_Power = 0.0f;
         float dB = -130.0f; //temp value for max research
         float peakDb = -130.0f; //peak on integrated signal
+        float peakNormalized = 0.0f ; //peak normalized
         int index_peak = 0;
         float WW_average_power = -130.0f; //TO DO remonter en static si on veut moyenner un peu ???
         float WW_average_integrated_power = -130.0f;
@@ -433,9 +435,12 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         if (peakBuffer.empty()) {
             peakBuffer.assign(peakRemanance, -130.0);
         }
+        //IDEM prepare peak normalized for remanance
+        if (peakNormalizedBuffer.empty()) {
+            peakNormalizedBuffer.assign(peakRemanance, 0.0);
+        }
         //Stock peakDb.
         peakBuffer[indexPeakBuffer] = peakDb;
-        indexPeakBuffer = (indexPeakBuffer + 1) % peakRemanance;
 
         //LEVEL 1 SET-UP: peak reading as something appearing on top of noise
         //Noise statistics calculation
@@ -475,6 +480,12 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         float noisePercentile = percentileBufferSorted[noiseBufferSize-static_cast<int>(std::floor(static_cast<double>(noiseBufferSize)/2))];
         float noiseMedian = medianBufferSorted[noiseBufferSize-static_cast<int>(std::floor(static_cast<double>(noiseBufferSize)/2))];
         float noiseSigma = noisePercentile - noiseMedian ; //not really sigma but...
+
+        peakNormalized = peakDb - noiseMedian ;
+        //IDEM Stock peakNormalized
+        peakNormalizedBuffer[indexPeakBuffer] = peakNormalized ;
+        //increment index
+        indexPeakBuffer = (indexPeakBuffer + 1) % peakRemanance;
 
         //CHECK
         if (integrationCount % 500 == 0) {
@@ -802,10 +813,13 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         // Stick the peak if goes down
         auto peakRemanantMaxIter = std::max_element(peakBuffer.begin(), peakBuffer.end());
         float peakRemanantMax = *peakRemanantMaxIter ;
+        // IDEM for peakNormalized
+        auto peakNormalizedMaxIter = std::max_element(peakNormalizedBuffer.begin(), peakNormalizedBuffer.end());
+        float peakNormalizedMax = *peakNormalizedMaxIter ;
         // Send peak of signal to Java
         env->CallVoidMethod(peakCallbackObj, peakCallbackMethod, peakRemanantMax);
         // Send normalized peak of signal to Java
-        env->CallVoidMethod(peakNormalizedCallbackObj, peakNormalizedCallbackMethod, peakRemanantMax);
+        env->CallVoidMethod(peakNormalizedCallbackObj, peakNormalizedCallbackMethod, peakNormalizedMax);
         // Send new frequency tracking to Java
         env->CallVoidMethod(peakFrequencyCallbackObj, peakFrequencyCallbackMethod, static_cast<long>(std::round(trackingFrequency)));
 
