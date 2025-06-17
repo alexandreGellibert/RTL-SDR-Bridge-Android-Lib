@@ -2,8 +2,8 @@
 // Created by alexandre on 4/20/25.
 //
 
-#ifndef PULSE_HUNT_PREFERENCES_H
-#define PULSE_HUNT_PREFERENCES_H
+#ifndef SDR_BRIDGE_PREFERENCES_H
+#define SDR_BRIDGE_PREFERENCES_H
 
 
 #include <string>
@@ -101,4 +101,4 @@ private:
 };
 
 
-#endif //PULSE_HUNT_PREFERENCES_H
+#endif //SDR_BRIDGE_PREFERENCES_H
