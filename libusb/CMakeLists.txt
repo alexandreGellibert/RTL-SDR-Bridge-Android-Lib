@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.3.1)
 
 PROJECT( "libusb" C )
 
+# Force 16 KB segment alignment
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,max-page-size=0x4000")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=0x4000")
+
 FILE ( GLOB_RECURSE SOURCES_LIB "libusb/*.c" )
 
 SET ( CMAKE_C_FLAGS         "-Wall" )

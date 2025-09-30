@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.22.1)
 
 project("rtl-sdr-bridge-android-lib")
 
+# Force 16 KB segment alignment
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,max-page-size=0x4000")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=0x4000")
+
 # Build libusb as a shared library
 add_subdirectory(libusb)
 
