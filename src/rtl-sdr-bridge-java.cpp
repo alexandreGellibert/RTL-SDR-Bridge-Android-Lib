@@ -1027,3 +1027,24 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeInitParameters(
     );
     return true;
 }
+
+extern "C" JNIEXPORT jintArray JNICALL
+Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeGetTunerGains(JNIEnv *env, jobject obj) {
+    if (dev == nullptr) {
+        return nullptr;
+    }
+
+    int num_gains = rtlsdr_get_tuner_gains(dev, nullptr);
+    if (num_gains <= 0) {
+        return nullptr;
+    }
+
+    int *gains = new int[num_gains];
+    rtlsdr_get_tuner_gains(dev, gains);
+
+    jintArray result = env->NewIntArray(num_gains);
+    env->SetIntArrayRegion(result, 0, num_gains, gains);
+
+    delete[] gains;
+    return result;
+}

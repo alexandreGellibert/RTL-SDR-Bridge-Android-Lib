@@ -82,4 +82,6 @@ object RtlSdrBridgeWrapper {
     external fun nativeSetWwThresholdLVL2(wwThresholdLVL2: Float)
 
     external fun nativeSetWwThresholdLVL3(wwThresholdLVL3: Float)
+
+    external fun nativeGetTunerGains(): IntArray?
 }
