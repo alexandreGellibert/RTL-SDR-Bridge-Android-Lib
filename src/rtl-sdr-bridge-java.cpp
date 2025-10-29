@@ -301,7 +301,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
 
         // Traitement SSB
         std::vector<int16_t> pcm;
-        processSSB(buffer, len, sampleRate, USB, pcm);
+        processSSB(buffer, len, sampleRate, USB, pcm, 5.0f);
 
         if (pcmCallbackObj != nullptr && !pcm.empty()) {
             jshortArray pcmArray = env->NewShortArray(pcm.size());

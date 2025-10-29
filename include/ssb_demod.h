@@ -28,7 +28,7 @@ std::vector<float> decimate(const std::vector<float>& in, int factor);
 std::vector<int16_t> floatToPCM(const std::vector<float>& in, float gain = 0.8f);
 
 /// Chaîne complète de traitement SSB IQ -> PCM
-void processSSB(const unsigned char* buffer, int len, uint32_t sampleRate, bool upperSideband, std::vector<int16_t>& pcmOut);
+void processSSB(const unsigned char* buffer, int len, uint32_t sampleRate, bool upperSideband, std::vector<int16_t>& pcmOut, float gain = 5.0f);
 
 /// Écrit un buffer PCM en fichier WAV 16-bit mono
 bool writeWav(const std::string& filename, const std::vector<int16_t>& pcm, int sampleRate = 48000);

@@ -101,7 +101,7 @@ std::vector<int16_t> floatToPCM(const std::vector<float>& in, float gain) {
 // ------------------------------------------------------------
 // 7. Pipeline complet IQ -> PCM
 // ------------------------------------------------------------
-void processSSB(const unsigned char* buffer, int len, uint32_t sampleRate, bool upperSideband, std::vector<int16_t>& pcmOut) {
+void processSSB(const unsigned char* buffer, int len, uint32_t sampleRate, bool upperSideband, std::vector<int16_t>& pcmOut, float gain) {
     std::vector<std::complex<float>> iq;
     convertIQ(buffer, len, iq);
 
@@ -111,7 +111,7 @@ void processSSB(const unsigned char* buffer, int len, uint32_t sampleRate, bool 
 
     int decim = std::max(1, static_cast<int>(sampleRate / 48000.0f));
     auto audio48k = decimate(audio, decim);
-    pcmOut = floatToPCM(audio48k);
+    pcmOut = floatToPCM(audio48k, gain);
 }
 
 // ------------------------------------------------------------
