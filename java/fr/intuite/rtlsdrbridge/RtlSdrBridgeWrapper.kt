@@ -50,7 +50,8 @@ object RtlSdrBridgeWrapper {
         signalStrengthCallback: (Int) -> Unit,
         peakCallback: (Float) -> Unit,
         peakNormalizedCallback: (Float) -> Unit,
-        peakFrequencyCallback: (Long) -> Unit
+        peakFrequencyCallback: (Long) -> Unit,
+        pcmCallback: (ShortArray) -> Unit
     )
 
     external fun nativeCancelAsync()

@@ -106,6 +106,8 @@ static jobject peakNormalizedCallbackObj = nullptr; // Global reference to the c
 static jmethodID peakNormalizedCallbackMethod = nullptr; // Method ID for the callback
 static jobject peakFrequencyCallbackObj = nullptr; // Global reference to the callback
 static jmethodID peakFrequencyCallbackMethod = nullptr; // Method ID for the callback
+static jobject pcmCallbackObj = nullptr;
+static jmethodID pcmCallbackMethod = nullptr;
 static bool isRunning = false;
 static bool isCenterFrequencyChanged =false ;
 
@@ -250,7 +252,8 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         jobject signalStrengthCallback,
         jobject peakCallback,
         jobject peakNormalizedCallback,
-        jobject peakFrequencyCallback) {
+        jobject peakFrequencyCallback,
+        jobject pcmCallback) {
 
     if (dev == nullptr) {
         LOGD("Device not initialized");
@@ -278,6 +281,10 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
     jclass peakFrequencyCallbackClass = env->GetObjectClass(peakFrequencyCallback);
     peakFrequencyCallbackMethod = env->GetMethodID(peakFrequencyCallbackClass, "invoke","(J)V");
 
+    pcmCallbackObj = env->NewGlobalRef(pcmCallback);
+    jclass pcmCallbackClass = env->GetObjectClass(pcmCallback);
+    pcmCallbackMethod = env->GetMethodID(pcmCallbackClass, "invoke", "([S)V");
+
     // Callback for rtlsdr_read_async
     auto rtlsdrCallback = [](unsigned char *buffer, uint32_t len, void *ctx) {
 
@@ -295,6 +302,15 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         // Traitement SSB
         std::vector<int16_t> pcm;
         processSSB(buffer, len, sampleRate, USB, pcm);
+
+        if (pcmCallbackObj != nullptr && !pcm.empty()) {
+            jshortArray pcmArray = env->NewShortArray(pcm.size());
+            if (pcmArray != nullptr) {
+                env->SetShortArrayRegion(pcmArray, 0, pcm.size(), pcm.data());
+                env->CallVoidMethod(pcmCallbackObj, pcmCallbackMethod, pcmArray);
+                env->DeleteLocalRef(pcmArray);
+            }
+        }
 
         //// Empilement dans le buffer WAV
         //{
@@ -907,6 +923,10 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeCloseRTL(JNIEnv *env, job
     if (peakNormalizedCallbackObj != nullptr) {
         env->DeleteGlobalRef(peakNormalizedCallbackObj);
         peakNormalizedCallbackObj = nullptr;
+    }
+    if (pcmCallbackObj != nullptr) {
+        env->DeleteGlobalRef(pcmCallbackObj);
+        pcmCallbackObj = nullptr;
     }
     if (result != nullptr) {
         env->DeleteGlobalRef(result);
