@@ -10,10 +10,12 @@
 #include <vector>
 #include <chrono>
 #include <iostream>
+#include <fstream>
 #include <numeric>
 #include <complex>
 #include <rtl-sdr.h>
 #include "../include/rtl-sdr-bridge-preferences.h"
+#include "../include/ssb_demod.h"
 #include <algorithm>
 #include <stdexcept>
 #include <cstring>
@@ -174,11 +176,20 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeInitRTL(JNIEnv *env, jobj
 // Global or static jfloatArray (ensure thread safety if needed)
 static jfloatArray result = nullptr;
 
+// Declaration des variables pour le son
+//std::ofstream wavFile;
+//std::vector<int16_t> wavBuffer;
+//std::atomic<bool> stopFlag{false};
+//std::mutex wavMutex;
+
+//const int SAMPLE_RATE = 2400000; //CHECK if not already declared ???
+const bool USB = true;
+
 // Declaration of signal treatment variables
 using namespace std::chrono;
 // FFT and visiualization
 static int integrationCount = 0;
-static int integrationPeriod = 8; // Number of packets to integrate in temporal
+static int integrationPeriod = 5; // Number of packets to integrate in temporal
 static int bufferIndex = 0;
 static fftwf_complex *circularBuffer = nullptr ;
 static int currentSampCount = 0;
@@ -280,6 +291,31 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
 
         uint32_t centerFrequency = Preferences::getInstance().getCenterFrequency();
         uint32_t sampleRate = Preferences::getInstance().getSampleRate();
+
+        // Traitement SSB
+        std::vector<int16_t> pcm;
+        processSSB(buffer, len, sampleRate, USB, pcm);
+
+        //// Empilement dans le buffer WAV
+        //{
+        //    std::lock_guard<std::mutex> lock(wavMutex);
+        //    wavBuffer.insert(wavBuffer.end(), pcm.begin(), pcm.end());
+        //}
+
+        //std::cout << "." << std::flush;  // petit indicateur d’activité
+
+        //// Préparation du fichier WAV
+        //std::cout << "Capture en cours... (Ctrl+C pour arrêter)\n";
+        //wavBuffer.reserve(10 * SAMPLE_RATE / 50); // quelques secondes d’audio
+
+        //// Écriture du fichier WAV final
+        //{
+        //    std::lock_guard<std::mutex> lock(wavMutex);
+        //    if (writeWav("output.wav", wavBuffer, 48000))
+        //        std::cout << "\n✅ Fichier 'output.wav' généré avec succès.\n";
+        //    else
+        //        std::cout << "\n❌ Erreur lors de l’écriture du WAV.\n";
+        //}
 
         int sampCount = len / 2;
 

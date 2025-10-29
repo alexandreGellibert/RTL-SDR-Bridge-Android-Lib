@@ -20,6 +20,7 @@ set_target_properties(fftw3f PROPERTIES
 add_library(${CMAKE_PROJECT_NAME} SHARED
         # List C/C++ source files with relative paths to this CMakeLists.txt.
         src/rtl-sdr-bridge-java.cpp
+        src/ssb_demod.cpp
         rtl-sdr/src/librtlsdr.c
         rtl-sdr/src/tuner_e4k.c
         rtl-sdr/src/tuner_fc0012.c
