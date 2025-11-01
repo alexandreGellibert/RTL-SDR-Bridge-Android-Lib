@@ -5,6 +5,12 @@ The Wrapper is written in Kotlin but can be adapted for Java without too much tr
 
 Our algorithm transforms the signal (FFT), detects peaks and signal quality too.
 
+> **⚠️ WORK IN PROGRESS — UNSTABLE**
+> 
+> This library is under active development. Breaking changes may occur at any time.
+> If you want to use it in production, **please fork it**.  
+> **No backward compatibility is guaranteed during the development phase.**
+
 ## How to install
 1. Create an Android Project (Kotlin - Java 17) (if you use another Java version, you need to update the buid.gradle.ktx file)
 2. Add the RTL-SDR-Bridge library as a git submodule:
