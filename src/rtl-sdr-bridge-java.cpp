@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <cstring>
+#include <atomic>
 
 #define LOG_TAG "RTL-SDR Bridge"
 #define BASENAME(file) (strrchr(file, '/') ? strrchr(file, '/') + 1 : (strrchr(file, '\\') ? strrchr(file, '\\') + 1 : file))
@@ -110,6 +111,7 @@ static jobject pcmCallbackObj = nullptr;
 static jmethodID pcmCallbackMethod = nullptr;
 static bool isRunning = false;
 static bool isCenterFrequencyChanged =false ;
+static std::atomic<bool> isUpdatingConfiguration(false);
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeInitRTL(JNIEnv *env, jobject obj, jint fd, jstring usbfsPath) {
@@ -288,7 +290,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
     // Callback for rtlsdr_read_async
     auto rtlsdrCallback = [](unsigned char *buffer, uint32_t len, void *ctx) {
 
-        if (!isRunning) {
+        if (!isRunning || isUpdatingConfiguration) {
             return;
         }
 
@@ -938,8 +940,10 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeCloseRTL(JNIEnv *env, job
 extern "C" JNIEXPORT void JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetFrequency(JNIEnv *env, jobject obj,
                                                                  jlong frequency) {
+    isUpdatingConfiguration = true;
     Preferences::getInstance().setCenterFrequency(frequency);
     if (dev == nullptr) {
+        isUpdatingConfiguration = false;
         return;
     }
 
@@ -949,13 +953,16 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetFrequency(JNIEnv *env,
         LOGD("New Frequency %ld", frequency);
     }
     isCenterFrequencyChanged = true ;
+    isUpdatingConfiguration = false;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetSampleRate(JNIEnv *env, jobject obj,
                                                                   jlong sampleRate) {
+    isUpdatingConfiguration = true;
     Preferences::getInstance().setSampleRate(sampleRate);
     if (dev == nullptr) {
+        isUpdatingConfiguration = false;
         return;
     }
     int r;
@@ -964,12 +971,15 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetSampleRate(JNIEnv *env
     } else {
         LOGD("New Sample rate %ld", sampleRate);
     }
+    isUpdatingConfiguration = false;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetGain(JNIEnv *env, jobject obj, jint gain) {
+    isUpdatingConfiguration = true;
     Preferences::getInstance().setGain(gain);
     if (dev == nullptr) {
+        isUpdatingConfiguration = false;
         return;
     }
     int r;
@@ -978,72 +988,93 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetGain(JNIEnv *env, jobj
     } else {
         LOGD("New Gain %d", gain);
     }
+    isUpdatingConfiguration = false;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetSamplesPerReading(JNIEnv *env, jobject obj,
                                                                          jint samplesPerReading) {
+    isUpdatingConfiguration = true;
     Preferences::getInstance().setSamplesPerReading(samplesPerReading);
     LOGD("New Samples Per Reading %d", samplesPerReading);
+    isUpdatingConfiguration = false;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetFrequencyFocusRange(JNIEnv *env, jobject obj,
                                                                            jint frequencyFocusRange) {
+    isUpdatingConfiguration = true;
     Preferences::getInstance().setSamplesPerReading(frequencyFocusRange);
     LOGD("New Frequency Focus Range %ld", frequencyFocusRange);
+    isUpdatingConfiguration = false;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetRefreshFFTMs(JNIEnv *env, jobject obj,
                                                                     jlong refreshFFTMs) {
+    isUpdatingConfiguration = true;
     Preferences::getInstance().setRefreshFFTMs(refreshFFTMs);
     LOGD("New Refresh FFT period in ms %ld", refreshFFTMs);
+    isUpdatingConfiguration = false;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetRefreshPeakMs(JNIEnv *env, jobject obj,
                                                                      jlong refreshPeakMs) {
+    isUpdatingConfiguration = true;
     Preferences::getInstance().setRefreshPeakMs(refreshPeakMs);
     LOGD("New Refresh Peak period in ms %ld", refreshPeakMs);
+    isUpdatingConfiguration = false;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetRefreshSignalStrengthMs(JNIEnv *env,
                                                                                jobject obj,
                                                                                jlong refreshSignalStrengthMs) {
+    isUpdatingConfiguration = true;
     Preferences::getInstance().setRefreshSignalStrengthMs(refreshSignalStrengthMs);
     LOGD("New Refresh Signal Strength %ld", refreshSignalStrengthMs);
+    isUpdatingConfiguration = false;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetIsMuted(JNIEnv *env, jobject obj,
                                                                jboolean isMuted) {
+    isUpdatingConfiguration = true;
     Preferences::getInstance().setIsMuted(isMuted);
+    isUpdatingConfiguration = false;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetDynamicThreshold(JNIEnv *env, jobject obj,
                                                                         jboolean dynamicThreshold) {
+    isUpdatingConfiguration = true;
     Preferences::getInstance().setDynamicThreshold(dynamicThreshold);
+    isUpdatingConfiguration = false;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetNarrowWindow(JNIEnv *env, jobject obj,
                                                                      jboolean narrowWindow) {
+    isUpdatingConfiguration = true;
     Preferences::getInstance().setNarrowWindow(narrowWindow);
+    isUpdatingConfiguration = false;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetWwThresholdLVL2(JNIEnv *env, jobject obj,
                                                                         jfloat wwThresholdLVL2) {
+    isUpdatingConfiguration = true;
     Preferences::getInstance().setWwThresholdLVL2(wwThresholdLVL2);
+    isUpdatingConfiguration = false;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetWwThresholdLVL3(JNIEnv *env, jobject obj,
                                                                         jfloat wwThresholdLVL3) {
+    isUpdatingConfiguration = true;
     Preferences::getInstance().setWwThresholdLVL3(wwThresholdLVL3);
+    isUpdatingConfiguration = false;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
