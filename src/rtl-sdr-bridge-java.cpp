@@ -20,6 +20,10 @@
 #include <stdexcept>
 #include <cstring>
 #include <atomic>
+#include <thread>
+#include <queue>
+#include <mutex>
+#include <condition_variable>
 
 #define LOG_TAG "RTL-SDR Bridge"
 #define BASENAME(file) (strrchr(file, '/') ? strrchr(file, '/') + 1 : (strrchr(file, '\\') ? strrchr(file, '\\') + 1 : file))
@@ -247,6 +251,69 @@ static int lvl3_repet_threshold =5 ;
 static float maxlvl3 = 0.0f ;
 
 
+// For SSB processing thread
+struct SSB_Data {
+    std::vector<unsigned char> buffer;
+    uint32_t len;
+    uint32_t sampleRate;
+};
+
+static std::queue<SSB_Data> ssb_queue;
+static std::mutex ssb_mutex;
+static std::condition_variable ssb_cv;
+static std::thread ssb_worker;
+static std::atomic<bool> ssb_worker_running(false);
+
+void ssb_processing_thread() {
+    JNIEnv* env;
+    JavaVM* javaVM = getJavaVM();
+    if (javaVM == nullptr) {
+        __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, "SSB Thread: JavaVM is NULL.");
+        return;
+    }
+
+    // Attach the current thread to the JVM
+    jint res = javaVM->AttachCurrentThread(&env, nullptr);
+    if (res != JNI_OK) {
+        __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, "SSB Thread: Failed to attach to JVM.");
+        return;
+    }
+
+    while (true) {
+        std::unique_lock<std::mutex> lock(ssb_mutex);
+        ssb_cv.wait(lock, []{ return !ssb_queue.empty() || !ssb_worker_running; });
+
+        if (!ssb_worker_running && ssb_queue.empty()) {
+            break; // Exit if worker is stopped and queue is empty
+        }
+
+        if (ssb_queue.empty()) {
+            continue; // Spurious wakeup
+        }
+
+        SSB_Data data = ssb_queue.front();
+        ssb_queue.pop();
+        lock.unlock();
+
+        std::vector<int16_t> pcm;
+        processSSB(data.buffer.data(), data.len, data.sampleRate, USB, pcm, 5.0f);
+
+        if (pcmCallbackObj != nullptr && !pcm.empty()) {
+            jshortArray pcmArray = env->NewShortArray(pcm.size());
+            if (pcmArray != nullptr) {
+                env->SetShortArrayRegion(pcmArray, 0, pcm.size(), pcm.data());
+                env->CallVoidMethod(pcmCallbackObj, pcmCallbackMethod, pcmArray);
+                env->DeleteLocalRef(pcmArray);
+            }
+        }
+    }
+
+    // Detach the current thread from the JVM
+    javaVM->DetachCurrentThread();
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "SSB Thread: Detached from JVM and finished.");
+}
+
+
 extern "C" JNIEXPORT void JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         JNIEnv *env, jobject thiz,
@@ -287,6 +354,12 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
     jclass pcmCallbackClass = env->GetObjectClass(pcmCallback);
     pcmCallbackMethod = env->GetMethodID(pcmCallbackClass, "invoke", "([S)V");
 
+    // Start SSB worker thread if not already running
+    if (!ssb_worker_running) {
+        ssb_worker_running = true;
+        ssb_worker = std::thread(ssb_processing_thread);
+    }
+
     // Callback for rtlsdr_read_async
     auto rtlsdrCallback = [](unsigned char *buffer, uint32_t len, void *ctx) {
 
@@ -301,18 +374,13 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         uint32_t centerFrequency = Preferences::getInstance().getCenterFrequency();
         uint32_t sampleRate = Preferences::getInstance().getSampleRate();
 
-        // Traitement SSB
-        std::vector<int16_t> pcm;
-        processSSB(buffer, len, sampleRate, USB, pcm, 5.0f);
-
-        if (pcmCallbackObj != nullptr && !pcm.empty()) {
-            jshortArray pcmArray = env->NewShortArray(pcm.size());
-            if (pcmArray != nullptr) {
-                env->SetShortArrayRegion(pcmArray, 0, pcm.size(), pcm.data());
-                env->CallVoidMethod(pcmCallbackObj, pcmCallbackMethod, pcmArray);
-                env->DeleteLocalRef(pcmArray);
-            }
+        // Enqueue data for SSB processing in a separate thread
+        {
+            std::vector<unsigned char> buffer_copy(buffer, buffer + len);
+            std::lock_guard<std::mutex> lock(ssb_mutex);
+            ssb_queue.push({std::move(buffer_copy), len, sampleRate});
         }
+        ssb_cv.notify_one();
 
         //// Empilement dans le buffer WAV
         //{
@@ -896,12 +964,29 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeCancelAsync(JNIEnv *env, 
         }
         LOGD("rtlsdr_cancel_async cancel result: %d", result);
     }
+
+    if (ssb_worker_running) {
+        ssb_worker_running = false;
+        ssb_cv.notify_one();
+        if (ssb_worker.joinable()) {
+            ssb_worker.join();
+        }
+    }
 }
 
 // Close: Cleanup device
 extern "C" JNIEXPORT void JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeCloseRTL(JNIEnv *env, jobject obj) {
     isRunning = false;
+
+    if (ssb_worker_running) {
+        ssb_worker_running = false;
+        ssb_cv.notify_one();
+        if (ssb_worker.joinable()) {
+            ssb_worker.join();
+        }
+    }
+
     if (dev != nullptr) {
         rtlsdr_close(dev);
         dev = nullptr;
