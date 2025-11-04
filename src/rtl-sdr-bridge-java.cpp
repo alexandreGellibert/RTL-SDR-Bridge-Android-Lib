@@ -197,7 +197,7 @@ const bool USB = true;
 using namespace std::chrono;
 // FFT and visiualization
 static int integrationCount = 0;
-static int integrationPeriod = 5; // Number of packets to integrate in temporal
+static int integrationPeriod = 5; // Number of packets to integrate in temporal. 1 means no integration to be calculated and so far displayed
 static int bufferIndex = 0;
 static fftwf_complex *circularBuffer = nullptr ;
 static int currentSampCount = 0;
@@ -250,7 +250,7 @@ static int lvl3_repet = 0 ;
 static int lvl3_repet_threshold =5 ;
 static float maxlvl3 = 0.0f ;
 
-
+//THREAD PART
 // For SSB processing thread
 struct SSB_Data {
     std::vector<unsigned char> buffer;
@@ -296,7 +296,7 @@ void ssb_processing_thread() {
         lock.unlock();
 
         std::vector<int16_t> pcm;
-        processSSB(data.buffer.data(), data.len, data.sampleRate, USB, pcm, 5.0f);
+        processSSB(data.buffer.data(), data.len, data.sampleRate, USB, pcm, 1.0f);
 
         if (pcmCallbackObj != nullptr && !pcm.empty()) {
             jshortArray pcmArray = env->NewShortArray(pcm.size());
@@ -354,6 +354,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
     jclass pcmCallbackClass = env->GetObjectClass(pcmCallback);
     pcmCallbackMethod = env->GetMethodID(pcmCallbackClass, "invoke", "([S)V");
 
+    //THREAD for SSB PART
     // Start SSB worker thread if not already running
     if (!ssb_worker_running) {
         ssb_worker_running = true;
@@ -373,7 +374,9 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
 
         uint32_t centerFrequency = Preferences::getInstance().getCenterFrequency();
         uint32_t sampleRate = Preferences::getInstance().getSampleRate();
-
+        //-----
+        //0. THREAD SSB PART
+        //-----
         // Enqueue data for SSB processing in a separate thread
         {
             std::vector<unsigned char> buffer_copy(buffer, buffer + len);
@@ -382,26 +385,31 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         }
         ssb_cv.notify_one();
 
-        //// Empilement dans le buffer WAV
-        //{
-        //    std::lock_guard<std::mutex> lock(wavMutex);
-        //    wavBuffer.insert(wavBuffer.end(), pcm.begin(), pcm.end());
+        // Traitement direct (sans thread)
+        //std::vector<int16_t> pcm;
+        //processSSB(buffer, len, sampleRate, USB, pcm, 5.0f);
+
+        // Traitement direct (sans thread) Version Mistral AI de publi
+        //if (pcmCallbackObj != nullptr && !pcm.empty()) {
+        //    jshortArray pcmArray = env->NewShortArray(pcm.size());
+        //    env->SetShortArrayRegion(pcmArray, 0, pcm.size(), reinterpret_cast<const jshort*>(pcm.data()));
+        //    env->CallVoidMethod(pcmCallbackObj, pcmCallbackMethod, pcmArray);
+        //    env->DeleteLocalRef(pcmArray);
         //}
 
-        //std::cout << "." << std::flush;  // petit indicateur d’activité
-
-        //// Préparation du fichier WAV
-        //std::cout << "Capture en cours... (Ctrl+C pour arrêter)\n";
-        //wavBuffer.reserve(10 * SAMPLE_RATE / 50); // quelques secondes d’audio
-
-        //// Écriture du fichier WAV final
-        //{
-        //    std::lock_guard<std::mutex> lock(wavMutex);
-        //    if (writeWav("output.wav", wavBuffer, 48000))
-        //        std::cout << "\n✅ Fichier 'output.wav' généré avec succès.\n";
-        //    else
-        //        std::cout << "\n❌ Erreur lors de l’écriture du WAV.\n";
+        //Traitement direct (sans thread) Vieille version d'envoi
+        //if (pcmCallbackObj != nullptr && !pcm.empty()) {
+        //    jshortArray pcmArray = env->NewShortArray(pcm.size());
+        //    if (pcmArray != nullptr) {
+        //        env->SetShortArrayRegion(pcmArray, 0, pcm.size(), pcm.data());
+        //        env->CallVoidMethod(pcmCallbackObj, pcmCallbackMethod, pcmArray);
+        //        env->DeleteLocalRef(pcmArray);
+        //    }
         //}
+
+        //-----
+        //1. Convert I/Q and prepare tables that depend on sampCount and store in circular buffer
+        //-----
 
         int sampCount = len / 2;
 
@@ -413,7 +421,6 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
             currentSampCount = sampCount;
             circularBuffer = fftwf_alloc_complex(currentSampCount * integrationPeriod);
         }
-
 
         for (int i = 0; i < sampCount && i * 2 < len; i++) {
             signal[i][0] = (float) (buffer[2 * i] - 127.4) / 128.0;
@@ -437,6 +444,10 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
             signal_integrated[i][1] = 0.0f; // Partie imaginaire
         }
 
+        //-----
+        //2. INTEGRATE signal and produce signal integrated
+        //-----
+
         // Perform integration
         //TO DO : integrate on timelapse and not on number of loop : if perf is different chat happens ?
         if (integrationCount >= integrationPeriod) {
@@ -450,6 +461,10 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
                 signal_integrated[i][1] /= integrationPeriod;
             }
         }
+
+        //-----
+        //3. PERFORM FFT on signal and integrated signal
+        //-----
 
         // Perform FFT on signal
         fftwf_plan plan1 = fftwf_plan_dft_1d(sampCount, signal, fft_signal, FFTW_FORWARD,
@@ -466,13 +481,17 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         // AND clean up
         fftwf_destroy_plan(plan2);
 
+        //-----
+        //4. COMPUTE POWER SPECTRUM on both inst and integrated
+        //-----
+
         //Define power inst and power integrated
         float power[sampCount];
         float power_shifted[sampCount];
         float power_integrated[sampCount];
         float power_integrated_shifted[sampCount];
 
-        //Compute power spectrum directly on signal integrated: power = real^2 + imag^2
+        //Compute power spectrum on signal AND on signal integrated : power = real^2 + imag^2
         for (int i = 0; i < sampCount; i++) {
             power[i] = fft_signal[i][0] * fft_signal[i][0] + fft_signal[i][1] * fft_signal[i][1];
         }
@@ -503,13 +522,23 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
             result = (jfloatArray) env->NewGlobalRef(result);
         }
 
+        //-----
+        //5. SEND POWER INTEGRATED to JAVA
+        //-----
+
         //NEXT : give power in db
         env->SetFloatArrayRegion(result, 0, sampCount, power_integrated_shifted);
         // Call the Kotlin fftCallback
         env->CallVoidMethod(fftCallbackObj, fftCallbackMethod, result);
 
-        // BANDWITH for PEAK EVALUATION
-        // Compute signal strength in subrange = wide window = WW(fc ± 10 kHz)
+        //-----
+        //6. SIGNAL STRENGTH EVALUATION on BANDWITH
+        //-----
+
+        //-----
+        // 6.1 BANDWITH definition for PEAK EVALUATION
+        //-----
+        // Define subrange = wide window = WW - manageable through UI
         float freqPerBin = static_cast<float>(sampleRate) / sampCount;  // Hz per bin
         float lowerWWBound = centerFrequency - Preferences::getInstance().getFreqFocusRangeKhz() *
                                              1000.0f;  // fc - 10 kHz
@@ -525,8 +554,10 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         upperWWIndex = sampCount - 1 > upperWWIndex ? upperWWIndex : sampCount - 1;
         int WW_size = upperWWIndex - lowerWWIndex + 1;
 
-        // SIGNAL PEAK MEASURE
-        // Look for signal peak (in case of signal strong enough)
+        //-----
+        // 6.2 INITIALISATION of variables for SIGNAL PEAK MEASURE
+        //-----
+        //Init of variables for peak evaluation
         float totalPower = 0.0f;
         float total_integrated_Power = 0.0f;
         float dB = -130.0f; //temp value for max research
@@ -535,9 +566,28 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         int index_peak = 0;
         float WW_average_power = -130.0f; //TO DO remonter en static si on veut moyenner un peu ???
         float WW_average_integrated_power = -130.0f;
-
         float power_integrated_shifted_DB[WW_size];
+        //Prepare peak buffer for remanance - target of remanance is to display peak on screen and keep highest value a bit stuck so yhat the eye get it
+        if (peakBuffer.empty()) {
+            peakBuffer.assign(peakRemanance, -130.0);
+        }
+        //Prepare peak NORMALIZED for remanance
+        if (peakNormalizedBuffer.empty()) {
+            peakNormalizedBuffer.assign(peakRemanance, 0.0);
+        }
+        //Init of noise statistics calculation
+        if(noisePercentileBuffer.empty()){
+            noisePercentileBuffer.assign(noiseBufferSize,0.0);
+        }
+        if(noiseMedianBuffer.empty()){
+            noiseMedianBuffer.assign(noiseBufferSize,0.0);
+        }
 
+        //-----
+        //6.3 SIGNAL PEAK MEASURE - look for signal peak (in case of signal strong enough)
+        //-----
+
+        //Run in a loop on subrange to find peak in subrange
         for (int i = lowerWWIndex; i <= upperWWIndex; i++) {
             dB = 10 * log10(power_integrated_shifted[i] / refPower);
             if (dB > peakDb) {
@@ -553,28 +603,13 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         WW_average_power = (totalPower / WW_size); // average defined on signal not integrated
         WW_average_integrated_power = (total_integrated_Power / WW_size);
 
-        //Prepare peak buffer for remanance.
-        if (peakBuffer.empty()) {
-            peakBuffer.assign(peakRemanance, -130.0);
-        }
-        //IDEM prepare peak normalized for remanance
-        if (peakNormalizedBuffer.empty()) {
-            peakNormalizedBuffer.assign(peakRemanance, 0.0);
-        }
-        //Stock peakDb.
+        //Stock PEAK in buffer for remanance
         peakBuffer[indexPeakBuffer] = peakDb;
 
-        //LEVEL 1 SET-UP: peak reading as something appearing on top of noise
-        //Noise statistics calculation
-        //Init
-        if(noisePercentileBuffer.empty()){
-            noisePercentileBuffer.assign(noiseBufferSize,0.0);
-        }
-        if(noiseMedianBuffer.empty()){
-            noiseMedianBuffer.assign(noiseBufferSize,0.0);
-        }
+        //-----
+        //6.4 NOISE EVALUATION - statistical data collection for Peak normalization and trigger def
+        //-----
 
-        //Calculation !
         //Do not take all the data to have some out of peak values
         if (integrationCount % 5 == 0) {
             float pourcentage = 2.0f; // Par exemple, 10%
@@ -603,8 +638,12 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         float noiseMedian = medianBufferSorted[noiseBufferSize-static_cast<int>(std::floor(static_cast<double>(noiseBufferSize)/2))];
         float noiseSigma = noisePercentile - noiseMedian ; //not really sigma but...
 
+        //-----
+        //6.5 SIGNAL PEAK NORMALIZED MEASURE -
+        //-----
+        //Peak normalized up of noise mediane
         peakNormalized = peakDb - noiseMedian ;
-        //IDEM Stock peakNormalized
+        //Stock PEAK normalized in buffer for remanance
         peakNormalizedBuffer[indexPeakBuffer] = peakNormalized ;
         //increment index
         indexPeakBuffer = (indexPeakBuffer + 1) % peakRemanance;
@@ -614,8 +653,9 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
             LOGD("Every 500 round. gap = %f", noiseSigma);
         }
 
-        //INIT of tables for narrow window
-
+        //-----
+        //6.6 INIT of tracking frequency, and peaks and its frequencies
+        //-----
         if(trackingFrequency == 0.0f){
             trackingFrequency = centerFrequency ;
         }
@@ -627,78 +667,17 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
             maxPeakAndFrequency = {-130.0f, static_cast<float>(centerFrequency)};
         }
 
-        //LEVEL 2 SET-UP : set up. trace des instantannés : ressemble à multiplier les signaux ;). Bon paramètre : integration period = 13, moyenne 5.5. Sur instantanné. Sur longueur 6 avec déclencheur à 7 = ok aussi ! Mettre de la récurrence.
-        //Define circular power size
-        circularPowerDBnormalized.resize(WW_size * integrationPowerPeriod);
-
-        //FEED circular power matrix with lines centered on 0 as average of power en instantaneous signal
-        for (int i = 0; i < WW_size && i * 2 < len; i++) {
-            int indexGlobal = i + lowerWWIndex;
-            // Update circular buffer with power
-            circularPowerDBnormalized[(indexCircularPowerDB * WW_size) + i] = 10 * log10(power_shifted[indexGlobal] / refPower) - WW_average_power;
-        }
-        //Calculate trace
-        std::vector<float> trace(WW_size, 0.0f);
-        float maxTrace = 0.0f;
-        int index_lvl2 = 0;
-        for (int i = 0; i < WW_size; i++) {
-            for (int k = 0; k < longueurTrace; k++) {
-                trace[i] += circularPowerDBnormalized[i + ((indexCircularPowerDB - k+integrationPowerPeriod)%integrationPowerPeriod) * WW_size];
-            }
-            if (trace[i] > maxTrace) {
-                maxTrace = trace[i];
-                index_lvl2 = i;
-            }
-        }
-        //Used only to try to define proper value
-        if (maxTrace>maxlvl2){
-            maxlvl2 = maxTrace ;
-        }
-
-        // LEVEL 3 SET-UP : éclairs ou cones. toper les obliques. A finir de régler !!!
-        std::vector<float> trace_zigzag(WW_size, 0.0f);
-        float maxTrace_zigzag = 0.0f;
-        int index_lvl3 = 0;
-        for (int i = 0; i < WW_size; i++) {
-            int i_zigzag = i ;
-            float max_zigzag = -10.0f ;
-            for (int k = 0; k < longueurTrace_zigzag; k++) {
-                if (k==0){
-                    max_zigzag=circularPowerDBnormalized[i + ((indexCircularPowerDB - k + integrationPowerPeriod) %integrationPowerPeriod) *WW_size];
-                }
-                else{
-                    for (int t = std::max(i_zigzag-1, 0);t<=std::min(i_zigzag+1,longueurTrace_zigzag);t++) {
-                         if(max_zigzag<circularPowerDBnormalized[t + ((indexCircularPowerDB - k + integrationPowerPeriod) %integrationPowerPeriod) *WW_size]){
-                             max_zigzag = circularPowerDBnormalized[t + ((indexCircularPowerDB - k + integrationPowerPeriod) %integrationPowerPeriod) *WW_size];
-                             i_zigzag = t ;
-                         }
-
-                    }
-                }
-                trace_zigzag[i] += max_zigzag ;
-            }
-            if (trace_zigzag[i] > maxTrace_zigzag) {
-                maxTrace_zigzag = trace_zigzag[i];
-                index_lvl3 = i;
-            }
-        }
-        //Used only to try to define proper value for lvl3
-        if (maxTrace_zigzag>maxlvl3){
-            maxlvl3 = maxTrace_zigzag ;
-        }
-
-        // TO DO Level 4 : stat sur répartitions
-
-        // signalStrengthIndex get value 0 : no signal ; 1 ; weak signal may be no signal, remanance short ; medium signal, remanance normal ; strong signal, remanance normal.
-        //CALCULATION of Signal Strength
+        //-----
+        //6.7 DEFINITION OF SIGNAL DETECTED - signalStrengthIndex get value 0 : no signal ; 1 ; weak signal may be no signal, remanance short ; medium signal, remanance normal ; strong signal, remanance normal.
+        //-----
+        //init of Signal Strength
         int signalEval = 0 ;
 
-        //LEVEL 1 CALCULATION : first
-        //First condition is a bit arbitral. To try link with noise "form"
+        //First condition for signal strong
         if (peakDb > noiseMedian + 2.5 * noiseSigma) {
             if (peakDb>maxPeakAndFrequency[0]) {
                 maxPeakAndFrequency[0] = peakDb ;
-                maxPeakAndFrequency[1] = index_peak * freqPerBin +lowerWWBound; //définir les règles de lautocalibration !!!
+                maxPeakAndFrequency[1] = index_peak * freqPerBin +lowerWWBound; //définir les règles de l'autocalibration !!!
                 timeOfLastMaxPeak = std::chrono::steady_clock::now();
                 LOGD("Level 1 déclenche. frequence = %f", trackingFrequency);
             }
@@ -720,103 +699,6 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
             maxPeakAndFrequency[0] = -130.0f ;
             LOGD("MAJ frequence = %f", trackingFrequency);
         }
-
-        //LEVEL 2 CALCULATION :
-        //Look for narrow window if narrow window and if nothing look large
-        //init
-        if(previousIndexLvl2==666){
-            previousIndexLvl2 = index_lvl2 ;
-        }
-
-        //dynamic threshold
-        if(Preferences::getInstance().getDynamicThreshold()){
-            if (noiseSigma>1) {
-                Preferences::getInstance().setWwThresholdLVL2(1.5 * noiseSigma);
-            }
-        }
-
-        float wwThresholdLVL2 = Preferences::getInstance().getWwThresholdLVL2();
-        //evaluation of max trace over trigger repetition
-        if(maxTrace > wwThresholdLVL2 * longueurTrace && std::abs(previousIndexLvl2-index_lvl2)<4){
-            lvl2_repet++;
-        }
-        else{
-            if (Preferences::getInstance().getNarrowWindow()){
-                float NWthresholdLVL2 = 0.95 * wwThresholdLVL2; // Peut-être un peu offensif mais détecte super bien
-                float freqLvl2 = index_lvl2*freqPerBin+lowerWWBound;
-
-                if (maxTrace > NWthresholdLVL2 * longueurTrace && std::abs(previousIndexLvl2-index_lvl2)<4 &&lowTrackingFrequency+trackingFrequency<freqLvl2 && freqLvl2<upperTrackingFrequency + trackingFrequency){
-                    lvl2_repet++;
-                }
-                else {
-                    lvl2_repet = 0;
-                    previousIndexLvl2 = 666;
-                }
-            }
-            else {
-                lvl2_repet = 0;
-                previousIndexLvl2 = 666;
-            }
-        }
-
-        //Signal eval calculation with lvl2 repetition
-        if(lvl2_repet>lvl2_repet_threshold){
-            //remanancelvl2 = 20 ;
-            LOGD("LVL2 déclenche. signal lvl2 = %f", maxTrace/longueurTrace);
-            LOGD("LVL2 déclenche. gap = %f", noiseSigma);
-            //LOGD("Index lvl2: %d", index_lvl2);
-            //LOGD("lvl2_repet: %d", lvl2_repet);
-            signalEval = signalEval+lvl2_repet-lvl2_repet_threshold;
-        }
-
-        //LEVEL 3 CALCULATION :
-        //init
-        if(previousIndexLvl3==666){
-            previousIndexLvl3 = index_lvl3 ;
-        }
-
-        //dynamic threshold
-        if(Preferences::getInstance().getDynamicThreshold()){
-            if(noiseSigma>1) {
-                Preferences::getInstance().setWwThresholdLVL3(1.8 * noiseSigma);
-            }
-        }
-
-        //11 pas mal mais déclanche un poil trop. autre idée allonger la trace
-
-        float wwThresholdLVL3 = Preferences::getInstance().getWwThresholdLVL3();
-        if (maxTrace_zigzag > wwThresholdLVL3 * longueurTrace_zigzag && std::abs(previousIndexLvl3-index_lvl3)<10) {
-            lvl3_repet++;
-        }
-        else{
-            if (Preferences::getInstance().getNarrowWindow()) {
-                float NWthresholdLVL3 = 0.95 * wwThresholdLVL3;
-                float freqLvl3 = index_lvl3 * freqPerBin + lowerWWBound;
-                if (maxTrace_zigzag > wwThresholdLVL3 * longueurTrace_zigzag &&
-                    std::abs(previousIndexLvl3 - index_lvl3) < 10 &&
-                    lowTrackingFrequency + trackingFrequency < freqLvl3 &&
-                    freqLvl3 < upperTrackingFrequency + trackingFrequency) {
-                    lvl3_repet++;
-                } else {
-                    lvl3_repet = 0;
-                    previousIndexLvl3 = 666;
-                }
-            }
-            else {
-                    lvl3_repet = 0;
-                    previousIndexLvl3 = 666;
-            }
-        }
-
-        //Signal eval calculation with lvl3 repetition
-        if(lvl3_repet>lvl3_repet_threshold){ //3 pas mal mais déclanche un poil trop. autre idée allonger la trace
-                //remanancelvl3 = 20 ;
-                LOGD("LVL3 déclenche. signal lvl3 = %f", maxTrace_zigzag/longueurTrace_zigzag);
-                //LOGD("Index lvl3: %d", index_lvl3);
-                //LOGD("lvl3_repet: %d", lvl3_repet);
-                signalEval=signalEval+lvl3_repet-lvl3_repet_threshold;
-        }
-
 
         //tableau des occurences des signaux avec valeur et timestamp. weak si repet faible. medium si repet faible et régulier ou si repet fort. fort si repet fort et régulier.
         //A optimiser, pas besoin de passer partout
@@ -964,7 +846,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeCancelAsync(JNIEnv *env, 
         }
         LOGD("rtlsdr_cancel_async cancel result: %d", result);
     }
-
+    //THREAD SSB PART
     if (ssb_worker_running) {
         ssb_worker_running = false;
         ssb_cv.notify_one();
@@ -979,6 +861,7 @@ extern "C" JNIEXPORT void JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeCloseRTL(JNIEnv *env, jobject obj) {
     isRunning = false;
 
+    //THREAD SSB PART
     if (ssb_worker_running) {
         ssb_worker_running = false;
         ssb_cv.notify_one();

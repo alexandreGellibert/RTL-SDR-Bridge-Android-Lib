@@ -8,29 +8,42 @@
 #include <vector>
 #include <complex>
 #include <cstdint>
+#include <string>
 
-/// Convertit un buffer I/Q brut (uint8 interleaved) en échantillons complexes float
+// 2nd-order IIR RF filter
+struct IIR2 {
+    float a0, a1, a2, b1, b2;
+    float z1 = 0.0f, z2 = 0.0f;
+};
+
+// Biquad audio filter
+struct Biquad {
+    float a0, a1, a2, b1, b2;
+    float z1 = 0.0f, z2 = 0.0f;
+};
+
+// ------------------------------
+// Core smart SSB processing
+// ------------------------------
+void processSSB(const unsigned char *buffer, int len, uint32_t sampleRate,
+                                   bool upperSideband, std::vector<int16_t> &pcmOut, float gain = 0.9f);
+
+// ------------------------------
+// Utility helpers
+// ------------------------------
 void convertIQ(const unsigned char* buffer, int len, std::vector<std::complex<float>>& iq);
+void removeDC(std::vector<std::complex<float>>& iq, float alpha = 0.999f);
 
-/// Construit un filtre passe-bas FIR simple
-std::vector<float> makeLowpass(float cutoff, float fs, int N = 257);
+void iir2InitLowpass(IIR2 &f, float fs, float fc, float Q = 0.707f);
+void iir2Process(IIR2 &f, std::vector<std::complex<float>> &sig);
 
-/// Applique un filtre FIR (coefficients réels) sur un signal complexe
-std::vector<std::complex<float>> applyFIR(const std::vector<std::complex<float>>& in, const std::vector<float>& h);
+std::vector<float> demodSSB(const std::vector<std::complex<float>>& sig, bool upperSideband);
+void fastAGC(std::vector<float>& audio, float target = 0.25f, float attack = 0.005f, float decay = 0.999f);
 
-/// Démodule un signal SSB (USB ou LSB)
-std::vector<float> demodSSB(const std::vector<std::complex<float>>& sig, bool upperSideband = true);
+void biquadInitBandpass(Biquad& f, float fs, float f0, float Q);
+void biquadProcess(Biquad& f, std::vector<float>& x);
 
-/// Décime le signal par un facteur entier (sans anti-alias, à éviter en production)
-std::vector<float> decimate(const std::vector<float>& in, int factor);
-
-/// Convertit un signal float (-1..1) en PCM 16 bits
-std::vector<int16_t> floatToPCM(const std::vector<float>& in, float gain = 0.8f);
-
-/// Chaîne complète de traitement SSB IQ -> PCM
-void processSSB(const unsigned char* buffer, int len, uint32_t sampleRate, bool upperSideband, std::vector<int16_t>& pcmOut, float gain = 5.0f);
-
-/// Écrit un buffer PCM en fichier WAV 16-bit mono
-bool writeWav(const std::string& filename, const std::vector<int16_t>& pcm, int sampleRate = 48000);
+std::vector<float> simpleFIRDecimate(const std::vector<float>& in, int decim, float cutoffRel = 0.45f);
+std::vector<int16_t> floatToPCM(const std::vector<float>& in, float gain = 0.9f);
 
 #endif // SSB_DEMOD_H
