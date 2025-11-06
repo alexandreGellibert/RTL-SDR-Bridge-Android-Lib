@@ -15,7 +15,9 @@
 #include <complex>
 #include <rtl-sdr.h>
 #include "../include/rtl-sdr-bridge-preferences.h"
-#include "../include/ssb_demod.h"
+//#include "../include/ssb_demod.h"
+#include "../include/ssb_demod_high.h"
+//#include "../include/ssb_demod_boost.h"
 #include <algorithm>
 #include <stdexcept>
 #include <cstring>
@@ -197,7 +199,7 @@ const bool USB = true;
 using namespace std::chrono;
 // FFT and visiualization
 static int integrationCount = 0;
-static int integrationPeriod = 5; // Number of packets to integrate in temporal. 1 means no integration to be calculated and so far displayed
+static int integrationPeriod = 1; // Number of packets to integrate in temporal. 1 means no integration to be calculated and so far displayed
 static int bufferIndex = 0;
 static fftwf_complex *circularBuffer = nullptr ;
 static int currentSampCount = 0;
@@ -249,6 +251,8 @@ static int previousIndexLvl3 = 666 ;
 static int lvl3_repet = 0 ;
 static int lvl3_repet_threshold =5 ;
 static float maxlvl3 = 0.0f ;
+//SSB part
+bool sensitivityBoost = true ;
 
 //THREAD PART
 // For SSB processing thread
@@ -296,7 +300,7 @@ void ssb_processing_thread() {
         lock.unlock();
 
         std::vector<int16_t> pcm;
-        processSSB(data.buffer.data(), data.len, data.sampleRate, USB, pcm, 1.0f);
+        processSSB_high(data.buffer.data(), data.len, data.sampleRate, USB, pcm, 1.2f);
 
         if (pcmCallbackObj != nullptr && !pcm.empty()) {
             jshortArray pcmArray = env->NewShortArray(pcm.size());
