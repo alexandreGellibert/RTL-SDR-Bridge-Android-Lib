@@ -545,9 +545,9 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         // Define subrange = wide window = WW - manageable through UI
         float freqPerBin = static_cast<float>(sampleRate) / sampCount;  // Hz per bin
         float lowerWWBound = centerFrequency - Preferences::getInstance().getFreqFocusRangeKhz() *
-                                             1000.0f;  // fc - 10 kHz
+                                             1000.0f;  // fc - 5 kHz
         float upperWWBound = centerFrequency + Preferences::getInstance().getFreqFocusRangeKhz() *
-                                             1000.0f;  // fc + 10 kHz
+                                             1000.0f;  // fc + 5 kHz
 
         // Find bin indices for the subrange (after shifting)
         int lowerWWIndex = static_cast<int>((lowerWWBound - (centerFrequency - sampleRate / 2)) /
@@ -678,7 +678,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         int signalEval = 0 ;
 
         //First condition for signal strong
-        if (peakDb > noiseMedian + 2.5 * noiseSigma) {
+        if (peakDb > noiseMedian + 2.0 * noiseSigma) {
             if (peakDb>maxPeakAndFrequency[0]) {
                 maxPeakAndFrequency[0] = peakDb ;
                 maxPeakAndFrequency[1] = index_peak * freqPerBin +lowerWWBound; //définir les règles de l'autocalibration !!!
