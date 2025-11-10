@@ -388,6 +388,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         {
             std::vector<unsigned char> buffer_copy(buffer, buffer + len);
             std::lock_guard<std::mutex> lock(ssb_mutex);
+
             // To avoid delay, if the queue has pending items, clear it to process only the latest data.
             if (!ssb_queue.empty()) {
                 std::queue<SSB_Data>().swap(ssb_queue);
