@@ -253,6 +253,9 @@ static int lvl3_repet_threshold =5 ;
 static float maxlvl3 = 0.0f ;
 //SSB part
 bool sensitivityBoost = true ;
+static float gain_SSB = 1.2f ;
+static std::vector<int16_t> pcm;
+
 
 //THREAD PART
 // For SSB processing thread
@@ -299,8 +302,8 @@ void ssb_processing_thread() {
         ssb_queue.pop();
         lock.unlock();
 
-        std::vector<int16_t> pcm;
-        processSSB_high(data.buffer.data(), data.len, data.sampleRate, USB, pcm, 1.2f);
+        //std::vector<int16_t> pcm;
+        processSSB_high(data.buffer.data(), data.len, data.sampleRate, USB, pcm, gain_SSB);
 
         if (pcmCallbackObj != nullptr && !pcm.empty()) {
             jshortArray pcmArray = env->NewShortArray(pcm.size());
@@ -443,14 +446,14 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         integrationCount++;
 
         // Integrate the buffer
-        fftwf_complex *signal_integrated = fftwf_alloc_complex(sampCount);
-        fftwf_complex *fft_signal_integrated = fftwf_alloc_complex(sampCount);
+        //fftwf_complex *signal_integrated = fftwf_alloc_complex(sampCount);
+        //fftwf_complex *fft_signal_integrated = fftwf_alloc_complex(sampCount);
 
         // Remettre le tableau à zéro
-        for (int i = 0; i < sampCount; ++i) {
-            signal_integrated[i][0] = 0.0f; // Partie réelle
-            signal_integrated[i][1] = 0.0f; // Partie imaginaire
-        }
+        //for (int i = 0; i < sampCount; ++i) {
+        //    signal_integrated[i][0] = 0.0f; // Partie réelle
+        //    signal_integrated[i][1] = 0.0f; // Partie imaginaire
+        //}
 
         //-----
         //2. INTEGRATE signal and produce signal integrated
@@ -458,17 +461,17 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
 
         // Perform integration
         //TO DO : integrate on timelapse and not on number of loop : if perf is different chat happens ?
-        if (integrationCount >= integrationPeriod) {
-            for (int i = 0; i < sampCount; i++) {
-                for (int j = 0; j < integrationPeriod; j++) {
-                    signal_integrated[i][0] += circularBuffer[j * sampCount + i][0];
-                    signal_integrated[i][1] += circularBuffer[j * sampCount + i][1];
-                }
-                //LOGD("passe dans la boucle integration");
-                signal_integrated[i][0] /= integrationPeriod;
-                signal_integrated[i][1] /= integrationPeriod;
-            }
-        }
+        //if (integrationCount >= integrationPeriod) {
+        //    for (int i = 0; i < sampCount; i++) {
+        //        for (int j = 0; j < integrationPeriod; j++) {
+        //            signal_integrated[i][0] += circularBuffer[j * sampCount + i][0];
+        //            signal_integrated[i][1] += circularBuffer[j * sampCount + i][1];
+        //        }
+        //        //LOGD("passe dans la boucle integration");
+        //        signal_integrated[i][0] /= integrationPeriod;
+        //        signal_integrated[i][1] /= integrationPeriod;
+        //    }
+        //}
 
         //-----
         //3. PERFORM FFT on signal and integrated signal
@@ -483,11 +486,11 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
 
 
         // Perform FFT on signal integrated
-        fftwf_plan plan2 = fftwf_plan_dft_1d(sampCount, signal_integrated, fft_signal_integrated,
-                                             FFTW_FORWARD, FFTW_ESTIMATE);
-        fftwf_execute(plan2);
+        //fftwf_plan plan2 = fftwf_plan_dft_1d(sampCount, signal_integrated, fft_signal_integrated,
+        //                                     FFTW_FORWARD, FFTW_ESTIMATE);
+        //fftwf_execute(plan2);
         // AND clean up
-        fftwf_destroy_plan(plan2);
+        //fftwf_destroy_plan(plan2);
 
         //-----
         //4. COMPUTE POWER SPECTRUM on both inst and integrated
@@ -496,22 +499,22 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         //Define power inst and power integrated
         float power[sampCount];
         float power_shifted[sampCount];
-        float power_integrated[sampCount];
-        float power_integrated_shifted[sampCount];
+        //float power_integrated[sampCount];
+        //float power_integrated_shifted[sampCount];
 
         //Compute power spectrum on signal AND on signal integrated : power = real^2 + imag^2
         for (int i = 0; i < sampCount; i++) {
             power[i] = fft_signal[i][0] * fft_signal[i][0] + fft_signal[i][1] * fft_signal[i][1];
         }
-        for (int i = 0; i < sampCount; i++) {
-            power_integrated[i] = fft_signal_integrated[i][0] * fft_signal_integrated[i][0] +
-                                  fft_signal_integrated[i][1] * fft_signal_integrated[i][1];
-        }
+        //for (int i = 0; i < sampCount; i++) {
+        //    power_integrated[i] = fft_signal_integrated[i][0] * fft_signal_integrated[i][0] +
+        //                          fft_signal_integrated[i][1] * fft_signal_integrated[i][1];
+        //}
         //FREE
         fftwf_free(signal);
-        fftwf_free(signal_integrated);
+        //fftwf_free(signal_integrated);
         fftwf_free(fft_signal);
-        fftwf_free(fft_signal_integrated);
+        //fftwf_free(fft_signal_integrated);
 
         // Shift the power spectrum to center it (FFT shift)
         int half = sampCount / 2;
@@ -519,10 +522,10 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
             power_shifted[i] = power[i + half]; // Negative frequencies
             power_shifted[i + half] = power[i]; // Positive frequencies
         }
-        for (int i = 0; i < half; i++) {
-            power_integrated_shifted[i] = power_integrated[i + half]; // Negative frequencies
-            power_integrated_shifted[i + half] = power_integrated[i]; // Positive frequencies
-        }
+        //for (int i = 0; i < half; i++) {
+        //    power_integrated_shifted[i] = power_integrated[i + half]; // Negative frequencies
+        //    power_integrated_shifted[i + half] = power_integrated[i]; // Positive frequencies
+        //}
 
         if (result == nullptr) {
             result = env->NewFloatArray(sampCount);
@@ -535,7 +538,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         //-----
 
         //NEXT : give power in db
-        env->SetFloatArrayRegion(result, 0, sampCount, power_integrated_shifted);
+        env->SetFloatArrayRegion(result, 0, sampCount, power_shifted);
         // Call the Kotlin fftCallback
         env->CallVoidMethod(fftCallbackObj, fftCallbackMethod, result);
 
@@ -574,7 +577,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         int index_peak = 0;
         float WW_average_power = -130.0f; //TO DO remonter en static si on veut moyenner un peu ???
         float WW_average_integrated_power = -130.0f;
-        float power_integrated_shifted_DB[WW_size];
+        float power_shifted_DB[WW_size];
         //Prepare peak buffer for remanance - target of remanance is to display peak on screen and keep highest value a bit stuck so yhat the eye get it
         if (peakBuffer.empty()) {
             peakBuffer.assign(peakRemanance, -130.0);
@@ -597,19 +600,19 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
 
         //Run in a loop on subrange to find peak in subrange
         for (int i = lowerWWIndex; i <= upperWWIndex; i++) {
-            dB = 10 * log10(power_integrated_shifted[i] / refPower);
+            dB = 10 * log10(power_shifted[i] / refPower);
             if (dB > peakDb) {
                 peakDb = dB;
                 index_peak = i - lowerWWIndex;
             }
 
             totalPower += 10 * log10(power_shifted[i] / refPower);
-            power_integrated_shifted_DB[i - lowerWWIndex] =
-                    10 * log10(power_integrated_shifted[i] / refPower);
-            total_integrated_Power += 10 * log10(power_integrated_shifted[i] / refPower);
+            power_shifted_DB[i - lowerWWIndex] =
+                    10 * log10(power_shifted[i] / refPower);
+            totalPower += 10 * log10(power_shifted[i] / refPower);
         }
         WW_average_power = (totalPower / WW_size); // average defined on signal not integrated
-        WW_average_integrated_power = (total_integrated_Power / WW_size);
+        //WW_average_integrated_power = (total_integrated_Power / WW_size);
 
         //Stock PEAK in buffer for remanance
         peakBuffer[indexPeakBuffer] = peakDb;
@@ -624,9 +627,9 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
             int indexOfPercentile = static_cast<int>(std::floor(static_cast<double>(WW_size) * (1 - pourcentage / 100)));
             int indexOfMedian = static_cast<int>(std::floor(static_cast<double>(WW_size) * 0.5)); //Middle ;)
             //LOGD("index = %d", index) ;
-            std::sort(power_integrated_shifted_DB, power_integrated_shifted_DB + WW_size);
-            noisePercentileBuffer[indexNoiseBuffer] = power_integrated_shifted_DB[indexOfPercentile] ;
-            noiseMedianBuffer[indexNoiseBuffer] = power_integrated_shifted_DB[indexOfMedian] ;
+            std::sort(power_shifted_DB, power_shifted_DB + WW_size);
+            noisePercentileBuffer[indexNoiseBuffer] = power_shifted_DB[indexOfPercentile] ;
+            noiseMedianBuffer[indexNoiseBuffer] = power_shifted_DB[indexOfMedian] ;
             //LOGD("valeur percentilebuffer = %f", percentileBuffer[indexPercentileBuffer]);
             indexNoiseBuffer = (indexNoiseBuffer + 1) % noiseBufferSize;
         }
