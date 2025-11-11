@@ -252,9 +252,9 @@ static int lvl3_repet = 0 ;
 static int lvl3_repet_threshold =5 ;
 static float maxlvl3 = 0.0f ;
 //SSB part
-bool sensitivityBoost = true ;
-static float gain_SSB = 1.2f ;
+bool sensitivityBoost = true;
 static std::vector<int16_t> pcm;
+
 
 
 //THREAD PART
@@ -303,7 +303,7 @@ void ssb_processing_thread() {
         lock.unlock();
 
         //std::vector<int16_t> pcm;
-        processSSB_high(data.buffer.data(), data.len, data.sampleRate, USB, pcm, gain_SSB);
+        processSSB_high(data.buffer.data(), data.len, data.sampleRate, USB, pcm, Preferences::getInstance().getSsbGain());
 
         if (pcmCallbackObj != nullptr && !pcm.empty()) {
             jshortArray pcmArray = env->NewShortArray(pcm.size());
@@ -1017,13 +1017,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetRefreshSignalStrengthM
     isUpdatingConfiguration = false;
 }
 
-extern "C" JNIEXPORT void JNICALL
-Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetIsMuted(JNIEnv *env, jobject obj,
-                                                               jboolean isMuted) {
-    isUpdatingConfiguration = true;
-    Preferences::getInstance().setIsMuted(isMuted);
-    isUpdatingConfiguration = false;
-}
+
 
 extern "C" JNIEXPORT void JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetDynamicThreshold(JNIEnv *env, jobject obj,
@@ -1057,6 +1051,14 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetWwThresholdLVL3(JNIEnv
     isUpdatingConfiguration = false;
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetSsbGain(JNIEnv *env, jobject obj,
+                                                                    jfloat ssbGain) {
+    isUpdatingConfiguration = true;
+    Preferences::getInstance().setSsbGain(ssbGain);
+    isUpdatingConfiguration = false;
+}
+
 extern "C" JNIEXPORT jboolean JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeInitParameters(
         JNIEnv *env,
@@ -1069,7 +1071,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeInitParameters(
         jlong refreshFFTMs,
         jlong refreshPeakMs,
         jlong refreshSignalStrengthMs,
-        jboolean isMuted,
+        jfloat ssbGain,
         jboolean dynamicThreshold,
         jboolean narrowWindow,
         jfloat wwThresholdLVL2,
@@ -1086,7 +1088,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeInitParameters(
             refreshFFTMs,
             refreshPeakMs,
             refreshSignalStrengthMs,
-            isMuted,
+            ssbGain,
             dynamicThreshold,
             narrowWindow,
             wwThresholdLVL2,

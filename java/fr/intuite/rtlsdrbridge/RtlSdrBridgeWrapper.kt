@@ -33,7 +33,7 @@ object RtlSdrBridgeWrapper {
         refreshFFTMs: Long,
         refreshPeakMs: Long,
         refreshSignalStrengthMs: Long,
-        isMuted: Boolean,
+        ssbGain: Float,
         dynamicThreshold: Boolean,
         narrowWindow: Boolean,
         wwThresholdLVL2: Float,
@@ -74,7 +74,7 @@ object RtlSdrBridgeWrapper {
 
     external fun nativeSetRefreshSignalStrengthMs(refreshSignalStrengthMs: Long)
 
-    external fun nativeSetIsMuted(isMuted: Boolean)
+    external fun nativeSetSsbGain(ssbGain: Float)
 
     external fun nativeSetNarrowWindow(narrowWindow: Boolean)
 

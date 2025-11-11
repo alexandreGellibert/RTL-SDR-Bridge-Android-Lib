@@ -27,7 +27,7 @@ public:
             long long refreshFFTMs,
             long long refreshPeakMs,
             long long refreshSignalStrengthMs,
-            bool isMuted,
+            float ssbGain,
             bool dynamicThreshold,
             bool narrowWindow,
             float wwThresholdLVL2,
@@ -41,7 +41,7 @@ public:
         refreshFFTMs_ = std::chrono::milliseconds(refreshFFTMs);
         refreshPeakMs_ = std::chrono::milliseconds(refreshPeakMs);
         refreshSignalStrengthMs_ = std::chrono::milliseconds(refreshSignalStrengthMs);
-        isMuted_ = isMuted;
+        ssbGain_ = ssbGain;
         dynamicThreshold_ = dynamicThreshold;
         narrowWindow_ = narrowWindow;
         wwThresholdLVL2_ = wwThresholdLVL2;
@@ -58,7 +58,7 @@ public:
     std::chrono::milliseconds getRefreshGraphMs() const { return refreshFFTMs_; }
     std::chrono::milliseconds getRefreshStrengthMs() const { return refreshPeakMs_; }
     std::chrono::milliseconds getBipMaxLengthMs() const { return refreshSignalStrengthMs_; }
-    bool getIsMuted() const { return isMuted_; }
+    float getSsbGain() const { return ssbGain_; }
     bool getDynamicThreshold() const { return dynamicThreshold_; }
     bool getNarrowWindow() const { return narrowWindow_; }
     float getWwThresholdLVL2() const { return wwThresholdLVL2_; }
@@ -74,11 +74,11 @@ public:
     void setRefreshFFTMs(long long value) { refreshFFTMs_ = std::chrono::milliseconds(value); }
     void setRefreshPeakMs(long long value) { refreshPeakMs_ = std::chrono::milliseconds(value); }
     void setRefreshSignalStrengthMs(long long value) { refreshSignalStrengthMs_ = std::chrono::milliseconds(value); }
+    void setSsbGain(float value) { ssbGain_ = value; }
     void setDynamicThreshold(bool value) { dynamicThreshold_ = value; }
     void setNarrowWindow(bool value) { narrowWindow_ = value; }
     void setWwThresholdLVL2(float value) { wwThresholdLVL2_ = value; }
     void setWwThresholdLVL3(float value) { wwThresholdLVL3_ = value; }
-    void setIsMuted(bool value) { isMuted_ = value; }
 
 private:
     Preferences() = default; // Private constructor for singleton
@@ -92,7 +92,7 @@ private:
     std::chrono::milliseconds refreshFFTMs_ = std::chrono::milliseconds(0);
     std::chrono::milliseconds refreshPeakMs_ = std::chrono::milliseconds(0);
     std::chrono::milliseconds refreshSignalStrengthMs_ = std::chrono::milliseconds(0);
-    bool isMuted_ = false;
+    float ssbGain_ = 1.2f;
     bool dynamicThreshold_ = false;
     bool narrowWindow_ = false;
     float wwThresholdLVL2_ = 0.0f;
