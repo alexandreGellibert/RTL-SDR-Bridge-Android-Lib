@@ -1019,37 +1019,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetRefreshSignalStrengthM
 
 
 
-extern "C" JNIEXPORT void JNICALL
-Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetDynamicThreshold(JNIEnv *env, jobject obj,
-                                                                        jboolean dynamicThreshold) {
-    isUpdatingConfiguration = true;
-    Preferences::getInstance().setDynamicThreshold(dynamicThreshold);
-    isUpdatingConfiguration = false;
-}
 
-extern "C" JNIEXPORT void JNICALL
-Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetNarrowWindow(JNIEnv *env, jobject obj,
-                                                                     jboolean narrowWindow) {
-    isUpdatingConfiguration = true;
-    Preferences::getInstance().setNarrowWindow(narrowWindow);
-    isUpdatingConfiguration = false;
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetWwThresholdLVL2(JNIEnv *env, jobject obj,
-                                                                        jfloat wwThresholdLVL2) {
-    isUpdatingConfiguration = true;
-    Preferences::getInstance().setWwThresholdLVL2(wwThresholdLVL2);
-    isUpdatingConfiguration = false;
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetWwThresholdLVL3(JNIEnv *env, jobject obj,
-                                                                        jfloat wwThresholdLVL3) {
-    isUpdatingConfiguration = true;
-    Preferences::getInstance().setWwThresholdLVL3(wwThresholdLVL3);
-    isUpdatingConfiguration = false;
-}
 
 extern "C" JNIEXPORT void JNICALL
 Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetSsbGain(JNIEnv *env, jobject obj,
@@ -1071,11 +1041,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeInitParameters(
         jlong refreshFFTMs,
         jlong refreshPeakMs,
         jlong refreshSignalStrengthMs,
-        jfloat ssbGain,
-        jboolean dynamicThreshold,
-        jboolean narrowWindow,
-        jfloat wwThresholdLVL2,
-        jfloat wwThresholdLVL3
+        jfloat ssbGain
 ) {
     Preferences &prefs = Preferences::getInstance();
 // Initialize Preferences
@@ -1088,11 +1054,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeInitParameters(
             refreshFFTMs,
             refreshPeakMs,
             refreshSignalStrengthMs,
-            ssbGain,
-            dynamicThreshold,
-            narrowWindow,
-            wwThresholdLVL2,
-            wwThresholdLVL3
+            ssbGain
     );
     return true;
 }

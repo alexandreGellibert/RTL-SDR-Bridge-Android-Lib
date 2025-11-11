@@ -27,11 +27,7 @@ public:
             long long refreshFFTMs,
             long long refreshPeakMs,
             long long refreshSignalStrengthMs,
-            float ssbGain,
-            bool dynamicThreshold,
-            bool narrowWindow,
-            float wwThresholdLVL2,
-            float wwThresholdLVL3
+            float ssbGain
     ) {
         centerFrequency_ = centerFrequency;
         sampleRate_ = sampleRate;
@@ -42,10 +38,6 @@ public:
         refreshPeakMs_ = std::chrono::milliseconds(refreshPeakMs);
         refreshSignalStrengthMs_ = std::chrono::milliseconds(refreshSignalStrengthMs);
         ssbGain_ = ssbGain;
-        dynamicThreshold_ = dynamicThreshold;
-        narrowWindow_ = narrowWindow;
-        wwThresholdLVL2_ = wwThresholdLVL2;
-        wwThresholdLVL3_ = wwThresholdLVL3;
         isPrefsInitialized_ = true;
     }
 
@@ -59,10 +51,6 @@ public:
     std::chrono::milliseconds getRefreshStrengthMs() const { return refreshPeakMs_; }
     std::chrono::milliseconds getBipMaxLengthMs() const { return refreshSignalStrengthMs_; }
     float getSsbGain() const { return ssbGain_; }
-    bool getDynamicThreshold() const { return dynamicThreshold_; }
-    bool getNarrowWindow() const { return narrowWindow_; }
-    float getWwThresholdLVL2() const { return wwThresholdLVL2_; }
-    float getWwThresholdLVL3() const { return wwThresholdLVL3_; }
     bool isInitialized() const { return isPrefsInitialized_; }
 
     // Setters (for updates after initialization if needed)
@@ -75,10 +63,6 @@ public:
     void setRefreshPeakMs(long long value) { refreshPeakMs_ = std::chrono::milliseconds(value); }
     void setRefreshSignalStrengthMs(long long value) { refreshSignalStrengthMs_ = std::chrono::milliseconds(value); }
     void setSsbGain(float value) { ssbGain_ = value; }
-    void setDynamicThreshold(bool value) { dynamicThreshold_ = value; }
-    void setNarrowWindow(bool value) { narrowWindow_ = value; }
-    void setWwThresholdLVL2(float value) { wwThresholdLVL2_ = value; }
-    void setWwThresholdLVL3(float value) { wwThresholdLVL3_ = value; }
 
 private:
     Preferences() = default; // Private constructor for singleton
@@ -93,10 +77,6 @@ private:
     std::chrono::milliseconds refreshPeakMs_ = std::chrono::milliseconds(0);
     std::chrono::milliseconds refreshSignalStrengthMs_ = std::chrono::milliseconds(0);
     float ssbGain_ = 1.2f;
-    bool dynamicThreshold_ = false;
-    bool narrowWindow_ = false;
-    float wwThresholdLVL2_ = 0.0f;
-    float wwThresholdLVL3_ = 0.0f;
     bool isPrefsInitialized_ = false;
 };
 

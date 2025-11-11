@@ -33,11 +33,7 @@ object RtlSdrBridgeWrapper {
         refreshFFTMs: Long,
         refreshPeakMs: Long,
         refreshSignalStrengthMs: Long,
-        ssbGain: Float,
-        dynamicThreshold: Boolean,
-        narrowWindow: Boolean,
-        wwThresholdLVL2: Float,
-        wwThresholdLVL3: Float
+        ssbGain: Float
     ): Boolean
 
     external fun nativeInitRTL(
@@ -75,14 +71,6 @@ object RtlSdrBridgeWrapper {
     external fun nativeSetRefreshSignalStrengthMs(refreshSignalStrengthMs: Long)
 
     external fun nativeSetSsbGain(ssbGain: Float)
-
-    external fun nativeSetNarrowWindow(narrowWindow: Boolean)
-
-    external fun nativeSetDynamicThreshold(dynamicThreshold: Boolean)
-
-    external fun nativeSetWwThresholdLVL2(wwThresholdLVL2: Float)
-
-    external fun nativeSetWwThresholdLVL3(wwThresholdLVL3: Float)
 
     external fun nativeGetTunerGains(): IntArray?
 }
