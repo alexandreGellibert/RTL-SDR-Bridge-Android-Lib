@@ -229,8 +229,13 @@ static int remananceStrong = 0 ;
 //Noise evaluation
 static std::vector<float> noisePercentileBuffer ;
 static std::vector<float> noiseMedianBuffer ;
-static int noiseBufferSize = 15 ;
+static int noiseBufferSize = 1 ;
 static int indexNoiseBuffer = 0 ;
+
+static float noiseSigmaMin = 100 ;
+static float noiseSigmaMax = 0 ;
+static float peakNormalizedMax = 0 ;
+static float kiki_calcul = 0 ;
 //Level 1 variables
 static std::vector<float> peakBuffer ;
 static std::vector<float> peakNormalizedBuffer ;
@@ -303,7 +308,7 @@ void ssb_processing_thread() {
         lock.unlock();
 
         //std::vector<int16_t> pcm;
-        processSSB_high(data.buffer.data(), data.len, data.sampleRate, USB, pcm, Preferences::getInstance().getSsbGain());
+        processSSB_high(data.buffer.data(), data.len, data.sampleRate, USB, pcm, Preferences::getInstance().getSsbGain()); //Preferences::getInstance().getSsbGain()
 
         if (pcmCallbackObj != nullptr && !pcm.empty()) {
             jshortArray pcmArray = env->NewShortArray(pcm.size());
@@ -587,13 +592,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         if (peakNormalizedBuffer.empty()) {
             peakNormalizedBuffer.assign(peakRemanance, 0.0);
         }
-        //Init of noise statistics calculation
-        if(noisePercentileBuffer.empty()){
-            noisePercentileBuffer.assign(noiseBufferSize,0.0);
-        }
-        if(noiseMedianBuffer.empty()){
-            noiseMedianBuffer.assign(noiseBufferSize,0.0);
-        }
+
 
         //-----
         //6.3 SIGNAL PEAK MEASURE - look for signal peak (in case of signal strong enough)
@@ -623,31 +622,16 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         //-----
 
         //Do not take all the data to have some out of peak values
-        if (integrationCount % 5 == 0) {
-            float pourcentage = 2.0f; // Par exemple, 10%
-            int indexOfPercentile = static_cast<int>(std::floor(static_cast<double>(WW_size) * (1 - pourcentage / 100)));
-            int indexOfMedian = static_cast<int>(std::floor(static_cast<double>(WW_size) * 0.5)); //Middle ;)
-            //LOGD("index = %d", index) ;
-            std::sort(power_shifted_DB, power_shifted_DB + WW_size);
-            noisePercentileBuffer[indexNoiseBuffer] = power_shifted_DB[indexOfPercentile] ;
-            noiseMedianBuffer[indexNoiseBuffer] = power_shifted_DB[indexOfMedian] ;
-            //LOGD("valeur percentilebuffer = %f", percentileBuffer[indexPercentileBuffer]);
-            indexNoiseBuffer = (indexNoiseBuffer + 1) % noiseBufferSize;
-        }
-        //Define temp tables to sort data and get percentile and median
-        float percentileBufferSorted [noiseBufferSize] ;
-        float medianBufferSorted [noiseBufferSize] ;
-        for (int k = 0 ; k<noiseBufferSize;k++){
-            percentileBufferSorted[k]=noisePercentileBuffer[k];
-        }
-        for (int k = 0 ; k<noiseBufferSize;k++){
-            medianBufferSorted[k]=noiseMedianBuffer[k];
-        }
-        std::sort(percentileBufferSorted, percentileBufferSorted + noiseBufferSize);
-        std::sort(medianBufferSorted, medianBufferSorted + noiseBufferSize);
-        //Calculate data
-        float noisePercentile = percentileBufferSorted[noiseBufferSize-static_cast<int>(std::floor(static_cast<double>(noiseBufferSize)/2))];
-        float noiseMedian = medianBufferSorted[noiseBufferSize-static_cast<int>(std::floor(static_cast<double>(noiseBufferSize)/2))];
+
+        float pourcentage = 10.0f; // Par exemple, 10%
+        int indexOfPercentile = static_cast<int>(std::floor(static_cast<double>(WW_size) * (1 - pourcentage / 100)));
+        int indexOfMedian = static_cast<int>(std::floor(static_cast<double>(WW_size) * 0.5)); //Middle ;)
+        //LOGD("index = %d", index) ;
+        std::sort(power_shifted_DB, power_shifted_DB + WW_size);
+        float noisePercentile = power_shifted_DB[indexOfPercentile] ;
+        float noiseMedian= power_shifted_DB[indexOfMedian] ;
+        //LOGD("valeur percentilebuffer = %f", percentileBuffer[indexPercentileBuffer]);
+
         float noiseSigma = noisePercentile - noiseMedian ; //not really sigma but...
 
         //-----
@@ -660,9 +644,30 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         //increment index
         indexPeakBuffer = (indexPeakBuffer + 1) % peakRemanance;
 
+        //TEMP CODE FOR NOISe ANALYSIS
+        if (noiseSigma<noiseSigmaMin){
+            noiseSigmaMin = noiseSigma ;
+        }
+        if (noiseSigma>noiseSigmaMax){
+            noiseSigmaMax = noiseSigma ;
+        }
+        if(peakNormalized>peakNormalizedMax){
+            peakNormalizedMax = peakNormalized ;
+        }
+        if (peakNormalized/noiseSigma>kiki_calcul){
+            kiki_calcul = peakNormalized/noiseSigma ;
+        }
+
         //CHECK
         if (integrationCount % 500 == 0) {
-            LOGD("Every 500 round. gap = %f", noiseSigma);
+            LOGD("noiseSigma min = %f", noiseSigmaMin);
+            LOGD("noiseSigma max = %f", noiseSigmaMax);
+            LOGD("peakNormalized max = %f", peakNormalizedMax);
+            LOGD("kiki_calcul = %f", kiki_calcul);
+            peakNormalizedMax = 0.0f ;
+            noiseSigmaMax = 0.0f ;
+            noiseSigmaMin = 100.0f ;
+            kiki_calcul = 0.0f ;
         }
 
         //-----
@@ -686,7 +691,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         int signalEval = 0 ;
 
         //First condition for signal strong
-        if (peakDb > noiseMedian + 2.0 * noiseSigma) {
+        if (peakDb > noiseMedian + 2.6 * noiseSigma) {
             if (peakDb>maxPeakAndFrequency[0]) {
                 maxPeakAndFrequency[0] = peakDb ;
                 maxPeakAndFrequency[1] = index_peak * freqPerBin +lowerWWBound; //définir les règles de l'autocalibration !!!

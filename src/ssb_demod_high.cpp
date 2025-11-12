@@ -98,7 +98,7 @@ void adaptiveAGC(std::vector<float>& audio, float target, float fastAttack, floa
 // 6) Mini FIR decimation
 // ------------------------------
 std::vector<float> simpleFIRDecimate(const std::vector<float>& in, int decim, float cutoffRel) {
-    int N = 63; // court => léger CPU
+    int N = 255; // court => léger CPU
     std::vector<float> h(N);
     int M = N - 1;
     float fc = cutoffRel / decim;
