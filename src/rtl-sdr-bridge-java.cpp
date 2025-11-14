@@ -16,8 +16,10 @@
 #include <rtl-sdr.h>
 #include "../include/rtl-sdr-bridge-preferences.h"
 //#include "../include/ssb_demod.h"
-#include "../include/ssb_demod_high.h"
+//include "../include/ssb_demod_high.h"
 //#include "../include/ssb_demod_boost.h"
+#include "../include/ssb_demod_opt.h"
+//#include "../include/ssb_demod_opt+boost.h"
 #include <algorithm>
 #include <stdexcept>
 #include <cstring>
@@ -218,7 +220,7 @@ static float refPower = refMagnitude * refMagnitude;
 //Signal strength variables
 std::vector<time_point<high_resolution_clock>> signalTimeTable;
 static std::vector<int> signalStrengthIndexBuffer ;
-static int signalStrengthIndexRemanance = 30 ;
+static int signalStrengthIndexRemanance = 3 ;
 static int indexsignalStrengthIndexBuffer = 0 ;
 static int signalWeak = 1 ;
 static int signalMedium = 5 ;
@@ -239,7 +241,7 @@ static float kiki_calcul = 0 ;
 //Level 1 variables
 static std::vector<float> peakBuffer ;
 static std::vector<float> peakNormalizedBuffer ;
-static int peakRemanance = 50 ;
+static int peakRemanance = 5 ;
 static int indexPeakBuffer = 0 ;
 //Level 2 variables
 static std::vector<float> circularPowerDBnormalized ; // Used to stock power DB (not integrated) centered on 0
@@ -257,8 +259,11 @@ static int lvl3_repet = 0 ;
 static int lvl3_repet_threshold =5 ;
 static float maxlvl3 = 0.0f ;
 //SSB part
-bool sensitivityBoost = true;
+static bool sensitivityBoost = true;
+static float gain = 1.2f;
 static std::vector<int16_t> pcm;
+static int mode = 1 ;
+static bool pulse = false ;
 
 
 
@@ -307,8 +312,19 @@ void ssb_processing_thread() {
         ssb_queue.pop();
         lock.unlock();
 
-        //std::vector<int16_t> pcm;
-        processSSB_high(data.buffer.data(), data.len, data.sampleRate, USB, pcm, Preferences::getInstance().getSsbGain()); //Preferences::getInstance().getSsbGain()
+        //petit erzatz de la gestion des modes
+        float java_mode = Preferences::getInstance().getSsbGain() ;
+        if (java_mode > 1) {
+            mode = 2 ;
+        }
+        else if (java_mode < 1 && java_mode>0) {
+            mode = 1 ;
+        }
+        else {
+            mode = 0 ;
+        }
+
+        processSSB_opt(data.buffer.data(), data.len, data.sampleRate, USB, pcm, pulse, mode);
 
         if (pcmCallbackObj != nullptr && !pcm.empty()) {
             jshortArray pcmArray = env->NewShortArray(pcm.size());
@@ -318,6 +334,13 @@ void ssb_processing_thread() {
                 env->DeleteLocalRef(pcmArray);
             }
         }
+
+        // TO DO - DETECT PULS IN SOUND
+        //int signalEvalPulse = 0 ;
+        //if (pulse){
+        //    signalEvalPulse = 2 ;
+        //}
+        //env->CallVoidMethod(strengthCallbackObj, strengthCallbackMethod, signalEvalPulse);
     }
 
     // Detach the current thread from the JVM
@@ -659,7 +682,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         }
 
         //CHECK
-        if (integrationCount % 500 == 0) {
+        if (integrationCount % 15 == 0) {
             LOGD("noiseSigma min = %f", noiseSigmaMin);
             LOGD("noiseSigma max = %f", noiseSigmaMax);
             LOGD("peakNormalized max = %f", peakNormalizedMax);
@@ -691,7 +714,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
         int signalEval = 0 ;
 
         //First condition for signal strong
-        if (peakDb > noiseMedian + 2.6 * noiseSigma) {
+        if (peakDb > noiseMedian + 3.0 * noiseSigma) {
             if (peakDb>maxPeakAndFrequency[0]) {
                 maxPeakAndFrequency[0] = peakDb ;
                 maxPeakAndFrequency[1] = index_peak * freqPerBin +lowerWWBound; //définir les règles de l'autocalibration !!!
@@ -748,7 +771,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
             if (signalEval >= signalStrong ||
                 signalMedium <= signalEval && signalEval < signalStrong && abs_diff < 300) {
                 signalStrengthIndex = 3 ;
-                remananceStrong = 30;
+                remananceStrong = 3;
                 if (duration1_ms>666) {
                     signalTimeTable.push_back(high_resolution_clock::now());
                 }
@@ -776,7 +799,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
                     if (signalEval >= signalMedium ||
                         signalWeak <= signalEval && signalEval < signalMedium && abs_diff < 300) {
                         signalStrengthIndex = 2 ;
-                        remananceMedium = 15;
+                        remananceMedium = 2;
                         if (duration1_ms>666) {
                             signalTimeTable.push_back(high_resolution_clock::now());
                         }
@@ -789,7 +812,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
                         }
                         else{
                             if (signalEval>=signalWeak){
-                                remananceWeak =5 ;
+                                remananceWeak =1 ;
                                 signalStrengthIndex=1 ;
                                 if (duration1_ms>666) {
                                     signalTimeTable.push_back(high_resolution_clock::now());
@@ -825,8 +848,8 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeReadAsync(
             int signalStrengthIndexSent = 0 ;
         }
 
-        if (integrationCount%1000==0){
-            LOGD("time tous les 1000 tours");
+        if (integrationCount%100==0){
+            LOGD("time tous les 100 tours");
         }
 
         // Send signal typologyto Java
