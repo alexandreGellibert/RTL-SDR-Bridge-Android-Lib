@@ -312,17 +312,7 @@ void ssb_processing_thread() {
         ssb_queue.pop();
         lock.unlock();
 
-        //petit erzatz de la gestion des modes
-        float java_mode = Preferences::getInstance().getSsbGain() ;
-        if (java_mode > 1) {
-            mode = 2 ;
-        }
-        else if (java_mode < 1 && java_mode>0) {
-            mode = 1 ;
-        }
-        else {
-            mode = 0 ;
-        }
+        mode = Preferences::getInstance().getSoundMode() ;
 
         processSSB_opt(data.buffer.data(), data.len, data.sampleRate, USB, pcm, pulse, mode);
 
@@ -1050,10 +1040,10 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetRefreshSignalStrengthM
 
 
 extern "C" JNIEXPORT void JNICALL
-Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetSsbGain(JNIEnv *env, jobject obj,
-                                                                    jfloat ssbGain) {
+Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeSetSoundMode(JNIEnv *env, jobject obj,
+                                                                    jint soundMode) {
     isUpdatingConfiguration = true;
-    Preferences::getInstance().setSsbGain(ssbGain);
+    Preferences::getInstance().setSoundMode(soundMode);
     isUpdatingConfiguration = false;
 }
 
@@ -1069,7 +1059,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeInitParameters(
         jlong refreshFFTMs,
         jlong refreshPeakMs,
         jlong refreshSignalStrengthMs,
-        jfloat ssbGain
+        jint soundMode
 ) {
     Preferences &prefs = Preferences::getInstance();
 // Initialize Preferences
@@ -1082,7 +1072,7 @@ Java_fr_intuite_rtlsdrbridge_RtlSdrBridgeWrapper_nativeInitParameters(
             refreshFFTMs,
             refreshPeakMs,
             refreshSignalStrengthMs,
-            ssbGain
+            soundMode
     );
     return true;
 }

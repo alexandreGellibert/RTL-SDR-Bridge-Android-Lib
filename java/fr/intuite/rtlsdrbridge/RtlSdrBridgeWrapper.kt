@@ -33,7 +33,7 @@ object RtlSdrBridgeWrapper {
         refreshFFTMs: Long,
         refreshPeakMs: Long,
         refreshSignalStrengthMs: Long,
-        ssbGain: Float
+        soundMode: Int
     ): Boolean
 
     external fun nativeInitRTL(
@@ -70,7 +70,7 @@ object RtlSdrBridgeWrapper {
 
     external fun nativeSetRefreshSignalStrengthMs(refreshSignalStrengthMs: Long)
 
-    external fun nativeSetSsbGain(ssbGain: Float)
+    external fun nativeSetSoundMode(soundMode: Int)
 
     external fun nativeGetTunerGains(): IntArray?
 }

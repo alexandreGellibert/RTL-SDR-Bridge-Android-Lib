@@ -27,7 +27,7 @@ public:
             long long refreshFFTMs,
             long long refreshPeakMs,
             long long refreshSignalStrengthMs,
-            float ssbGain
+            int soundMode
     ) {
         centerFrequency_ = centerFrequency;
         sampleRate_ = sampleRate;
@@ -37,7 +37,7 @@ public:
         refreshFFTMs_ = std::chrono::milliseconds(refreshFFTMs);
         refreshPeakMs_ = std::chrono::milliseconds(refreshPeakMs);
         refreshSignalStrengthMs_ = std::chrono::milliseconds(refreshSignalStrengthMs);
-        ssbGain_ = ssbGain;
+        soundMode_ = soundMode;
         isPrefsInitialized_ = true;
     }
 
@@ -50,7 +50,7 @@ public:
     std::chrono::milliseconds getRefreshGraphMs() const { return refreshFFTMs_; }
     std::chrono::milliseconds getRefreshStrengthMs() const { return refreshPeakMs_; }
     std::chrono::milliseconds getBipMaxLengthMs() const { return refreshSignalStrengthMs_; }
-    float getSsbGain() const { return ssbGain_; }
+    float getSoundMode() const { return soundMode_; }
     bool isInitialized() const { return isPrefsInitialized_; }
 
     // Setters (for updates after initialization if needed)
@@ -62,7 +62,7 @@ public:
     void setRefreshFFTMs(long long value) { refreshFFTMs_ = std::chrono::milliseconds(value); }
     void setRefreshPeakMs(long long value) { refreshPeakMs_ = std::chrono::milliseconds(value); }
     void setRefreshSignalStrengthMs(long long value) { refreshSignalStrengthMs_ = std::chrono::milliseconds(value); }
-    void setSsbGain(float value) { ssbGain_ = value; }
+    void setSoundMode(int value) { soundMode_ = value; }
 
 private:
     Preferences() = default; // Private constructor for singleton
@@ -76,7 +76,7 @@ private:
     std::chrono::milliseconds refreshFFTMs_ = std::chrono::milliseconds(0);
     std::chrono::milliseconds refreshPeakMs_ = std::chrono::milliseconds(0);
     std::chrono::milliseconds refreshSignalStrengthMs_ = std::chrono::milliseconds(0);
-    float ssbGain_ = 1.2f;
+    int soundMode_ = 1;
     bool isPrefsInitialized_ = false;
 };
 
