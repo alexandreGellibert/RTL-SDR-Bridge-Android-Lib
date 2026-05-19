@@ -1,8 +1,14 @@
 [
   {
     "vendorId": "0x0bda",
-    "productId": "0x2838",
+    "productId": "0x2832",
     "name": "Generic RTL2832U",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x0bda",
+    "productId": "0x2838",
+    "name": "Generic RTL2832U OEM",
     "driver": "rtlsdr"
   },
   {
@@ -12,9 +18,189 @@
     "driver": "rtlsdr"
   },
   {
+    "vendorId": "0x0413",
+    "productId": "0x6680",
+    "name": "DigitalNow Quad DVB-T PCI-E card",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x0413",
+    "productId": "0x6f0f",
+    "name": "Leadtek WinFast DTV Dongle mini D",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x0458",
+    "productId": "0x707f",
+    "name": "Genius TVGo DVB-T03 USB dongle (Ver. B)",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x0ccd",
+    "productId": "0x00a9",
+    "name": "Terratec Cinergy T Stick Black",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x0ccd",
+    "productId": "0x00b3",
+    "name": "Terratec NOXON DAB/DAB+ USB dongle (rev 1)",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x0ccd",
+    "productId": "0x00b4",
+    "name": "Terratec Deutschlandradio DAB Stick",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x0ccd",
+    "productId": "0x00b5",
+    "name": "Terratec NOXON DAB Stick - Radio Energy",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x0ccd",
+    "productId": "0x00b7",
+    "name": "Terratec Media Broadcast DAB Stick",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x0ccd",
+    "productId": "0x00b8",
+    "name": "Terratec BR DAB Stick",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x0ccd",
+    "productId": "0x00b9",
+    "name": "Terratec WDR DAB Stick",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x0ccd",
+    "productId": "0x00c0",
+    "name": "Terratec MuellerVerlag DAB Stick",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x0ccd",
+    "productId": "0x00c6",
+    "name": "Terratec Fraunhofer DAB Stick",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x0ccd",
+    "productId": "0x00d3",
+    "name": "Terratec Cinergy T Stick RC (Rev.3)",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x0ccd",
+    "productId": "0x00d7",
+    "name": "Terratec Cinergy T Stick+",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x0ccd",
+    "productId": "0x00e0",
+    "name": "Terratec NOXON DAB/DAB+ USB dongle (rev 2)",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x1554",
+    "productId": "0x5020",
+    "name": "PixelView PV-DT235U(RN)",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x15f4",
+    "productId": "0x0131",
+    "name": "Astrometa DVB-T/DVB-T2",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x15f4",
+    "productId": "0x0133",
+    "name": "HanfTek DAB+FM+DVB-T",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x185b",
+    "productId": "0x0620",
+    "name": "Compro Videomate U620F",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x185b",
+    "productId": "0x0650",
+    "name": "Compro Videomate U650F",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x185b",
+    "productId": "0x0680",
+    "name": "Compro Videomate U680F",
+    "driver": "rtlsdr"
+  },
+  {
     "vendorId": "0x1b80",
     "productId": "0xd393",
     "name": "MyGica / Ardata / Twintech RTL2832U",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x1b80",
+    "productId": "0xd394",
+    "name": "DIKOM USB-DVBT HD",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x1b80",
+    "productId": "0xd395",
+    "name": "Peak 102569AGPK",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x1b80",
+    "productId": "0xd397",
+    "name": "KWorld KW-UB450-T USB DVB-T Pico TV",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x1b80",
+    "productId": "0xd398",
+    "name": "Zaapa ZT-MINDVBZP",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x1b80",
+    "productId": "0xd39d",
+    "name": "SVEON STV20 DVB-T USB & FM",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x1b80",
+    "productId": "0xd3a4",
+    "name": "Twintech UT-40",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x1b80",
+    "productId": "0xd3a8",
+    "name": "ASUS U3100MINI_PLUS_V2",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x1b80",
+    "productId": "0xd3af",
+    "name": "SVEON STV27 DVB-T USB & FM",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x1b80",
+    "productId": "0xd3b0",
+    "name": "SVEON STV21 DVB-T USB & FM",
     "driver": "rtlsdr"
   },
   {
@@ -27,6 +213,24 @@
     "vendorId": "0x1d19",
     "productId": "0x1102",
     "name": "Dexatek RTL2832U v3",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x1d19",
+    "productId": "0x1103",
+    "name": "Dexatek Technology Ltd. DK 5217 DVB-T Dongle",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x1d19",
+    "productId": "0x1104",
+    "name": "MSI DigiVox Micro HD",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x1f4d",
+    "productId": "0xa803",
+    "name": "Sweex DVB-T USB",
     "driver": "rtlsdr"
   },
   {
@@ -43,26 +247,14 @@
   },
   {
     "vendorId": "0x1f4d",
+    "productId": "0xd286",
+    "name": "MyGica TD312",
+    "driver": "rtlsdr"
+  },
+  {
+    "vendorId": "0x1f4d",
     "productId": "0xd803",
     "name": "PROlectrix RTL2832U",
-    "driver": "rtlsdr"
-  },
-  {
-    "vendorId": "0x0ccd",
-    "productId": "0x00a9",
-    "name": "Terratec Cinergy T Stick Black",
-    "driver": "rtlsdr"
-  },
-  {
-    "vendorId": "0x0ccd",
-    "productId": "0x00b3",
-    "name": "Terratec NOXON RTL2832U",
-    "driver": "rtlsdr"
-  },
-  {
-    "vendorId": "0x0ccd",
-    "productId": "0x00d7",
-    "name": "Terratec Cinergy T Stick+",
     "driver": "rtlsdr"
   },
   {
