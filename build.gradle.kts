@@ -40,6 +40,15 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        // See app/build.gradle.kts for why: keeps lambda callbacks passed into the native
+        // JNI bridge (SDRBridge.read, etc.) compiled with the pre-Kotlin-2.0 class-based
+        // strategy instead of the new default invokedynamic + D8 desugaring path.
+        freeCompilerArgs.addAll("-Xlambdas=class", "-Xsam-conversions=class")
+    }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation("com.google.code.gson:gson:2.10.1")
