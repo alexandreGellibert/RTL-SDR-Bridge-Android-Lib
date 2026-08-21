@@ -34,7 +34,8 @@ enum class Driver {
     RTLSDR,
     LIME,
     AIRSPY,
-    AIRSPYHF
+    AIRSPYHF,
+    HACKRF
 };
 
 Driver driver_from_string(std::string_view key) {
@@ -42,6 +43,7 @@ Driver driver_from_string(std::string_view key) {
     if (key == "lime"     || key == "LIME")     return Driver::LIME;
     if (key == "airspy"   || key == "AIRSPY")   return Driver::AIRSPY;
     if (key == "airspyhf" || key == "AIRSPYHF") return Driver::AIRSPYHF;
+    if (key == "hackrf"   || key == "HACKRF")   return Driver::HACKRF;
     return Driver::RTLSDR;  // fallback
 }
 
@@ -50,6 +52,7 @@ std::string_view driver_to_string(Driver d) {
     if (d == Driver::LIME)      return "lime";
     if (d == Driver::AIRSPY)    return "airspy";
     if (d == Driver::AIRSPYHF)  return "airspyhf";
+    if (d == Driver::HACKRF)    return "hackrf";
     return "rtlsdr";            // fallback
 }
 
@@ -367,6 +370,7 @@ extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
     loadModule("SoapyLimeSDR", "libSoapyLMS7.so");
     loadModule("SoapyAirspy", "libSoapyAirspy.so");
     loadModule("SoapyAirspyHF", "libSoapyAirspyHF.so");
+    loadModule("SoapyHackRF", "libSoapyHackRF.so");
 
     return JNI_VERSION_1_6;
 }

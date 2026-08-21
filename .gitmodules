@@ -28,3 +28,9 @@
 [submodule "third_party/airspyhf"]
 	path = third_party/airspyhf
 	url = https://github.com/alexandreGellibert/airspyhf-ForAndroid.git
+[submodule "third_party/hackrf"]
+	path = third_party/hackrf
+	url = github.com-perso:alexandreGellibert/hackrf_ForAndroid.git
+[submodule "third_party/SoapyHackRF"]
+	path = third_party/SoapyHackRF
+	url = github.com-perso:alexandreGellibert/SoapyHackRF_ForAndroid.git

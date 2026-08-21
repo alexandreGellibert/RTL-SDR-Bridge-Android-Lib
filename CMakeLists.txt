@@ -50,6 +50,8 @@ add_subdirectory(third_party/rtl-sdr)
 add_subdirectory(third_party/libairspy)
 # Airspy HF+
 add_subdirectory(third_party/airspyhf)
+# HackRF
+add_subdirectory(third_party/hackrf)
 
 # =======================
 # SoapySDR
@@ -58,6 +60,7 @@ add_subdirectory(third_party/SoapySDR)
 add_subdirectory(third_party/SoapyRTLSDR)
 add_subdirectory(third_party/SoapyAirspy)
 add_subdirectory(third_party/SoapyAirspyHF)
+add_subdirectory(third_party/SoapyHackRF)
 
 # LimeSuite
 add_subdirectory(third_party/LimeSuite)

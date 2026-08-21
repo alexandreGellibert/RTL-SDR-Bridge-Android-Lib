@@ -303,5 +303,11 @@
     "productId": "0x800c",
     "name": "Airspy HF+ / HF+ Discovery",
     "driver": "airspyhf"
+  },
+  {
+    "vendorId": "0x1d50",
+    "productId": "0x6089",
+    "name": "HackRF One",
+    "driver": "hackrf"
   }
 ]
