@@ -47,6 +47,8 @@ public:
     std::chrono::milliseconds getRefreshPeakMs() const { return refreshPeakMs_; }
     std::chrono::milliseconds getRefreshSignalStrengthMs() const { return refreshSignalStrengthMs_; }
     float getSoundMode() const { return soundMode_; }
+    // Demod mode: 0 = narrow SSB/CW phasing demod (default), 1 = wide FM discriminator.
+    int getDemodMode() const { return demodMode_; }
     bool isInitialized() const { return isPrefsInitialized_; }
 
     // Setters (for updates after initialization if needed)
@@ -59,6 +61,7 @@ public:
     void setRefreshPeakMs(long long value) { refreshPeakMs_ = std::chrono::milliseconds(value); }
     void setRefreshSignalStrengthMs(long long value) { refreshSignalStrengthMs_ = std::chrono::milliseconds(value); }
     void setSoundMode(int value) { soundMode_ = value; }
+    void setDemodMode(int value) { demodMode_ = value; }
 
 private:
     BridgeConfig() = default; // Private constructor for singleton
@@ -73,6 +76,7 @@ private:
     std::chrono::milliseconds refreshPeakMs_ = std::chrono::milliseconds(200);
     std::chrono::milliseconds refreshSignalStrengthMs_ = std::chrono::milliseconds(30);
     int soundMode_ = 1;
+    int demodMode_ = 0;
     bool isPrefsInitialized_ = false;
 };
 

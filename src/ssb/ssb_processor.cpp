@@ -99,8 +99,13 @@ void SSBProcessor::ssbProcessingLoop() {
         std::vector<int16_t> pcm;
         bool pulse = false;
         int mode = BridgeConfig::getInstance().getSoundMode();
+        int demodMode = BridgeConfig::getInstance().getDemodMode();
 
-        processSSB_opt(data.iq, data.sampleRate, true, pcm, pulse, mode);
+        if (demodMode == 1) {
+            processFM_opt(data.iq, data.sampleRate, pcm, mode);
+        } else {
+            processSSB_opt(data.iq, data.sampleRate, true, pcm, pulse, mode);
+        }
 
         if (pcmCallback && !pcm.empty()) {
             pcmCallback(pcm);

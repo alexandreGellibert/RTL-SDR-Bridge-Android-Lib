@@ -1070,6 +1070,13 @@ Java_fr_intuite_sdr_bridge_SDRBridge_setSoundMode(JNIEnv *env, jobject obj, jint
     isUpdatingConfiguration = false;
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_fr_intuite_sdr_bridge_SDRBridge_setDemodMode(JNIEnv *env, jobject obj, jint demodMode) {
+    isUpdatingConfiguration = true;
+    BridgeConfig::getInstance().setDemodMode(demodMode);
+    isUpdatingConfiguration = false;
+}
+
 extern "C" JNIEXPORT jboolean JNICALL
 Java_fr_intuite_sdr_bridge_SDRBridge_applyConfig(
         JNIEnv *env,

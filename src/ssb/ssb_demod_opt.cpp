@@ -84,6 +84,32 @@ void iir2Process(IIR2 &f, std::vector<std::complex<float>> &sig) {
 }
 
 // ------------------------------
+// 3b) Complex-preserving IIR2 lowpass
+// ------------------------------
+void iir2InitLowpassComplex(IIR2Complex &f, float fs, float fc, float Q) {
+    iir2InitLowpass(f.real, fs, fc, Q);
+    iir2InitLowpass(f.imag, fs, fc, Q);
+}
+
+void iir2ProcessComplex(IIR2Complex &f, std::vector<std::complex<float>> &sig) {
+    float z1r = f.real.z1, z2r = f.real.z2;
+    float z1i = f.imag.z1, z2i = f.imag.z2;
+    for (size_t i = 0; i < sig.size(); ++i) {
+        float xr = sig[i].real();
+        float yr = f.real.a0*xr + f.real.a1*z1r + f.real.a2*z2r - f.real.b1*z1r - f.real.b2*z2r;
+        z2r = z1r; z1r = yr;
+
+        float xi = sig[i].imag();
+        float yi = f.imag.a0*xi + f.imag.a1*z1i + f.imag.a2*z2i - f.imag.b1*z1i - f.imag.b2*z2i;
+        z2i = z1i; z1i = yi;
+
+        sig[i] = {yr, yi};
+    }
+    f.real.z1 = z1r; f.real.z2 = z2r;
+    f.imag.z1 = z1i; f.imag.z2 = z2i;
+}
+
+// ------------------------------
 // 4) Demod SSB (IQ -> audio)
 // ------------------------------
 void demodSSB(const std::vector<std::complex<float>>& iq, std::vector<float>& audio, bool upper) {
@@ -92,6 +118,24 @@ void demodSSB(const std::vector<std::complex<float>>& iq, std::vector<float>& au
         // simple phasing method: I +/- Q
         audio[i] = upper ? (iq[i].real() + iq[i].imag())
                          : (iq[i].real() - iq[i].imag());
+    }
+}
+
+// ------------------------------
+// 4b) FM discriminator (IQ -> audio)
+// ------------------------------
+void demodFM(const std::vector<std::complex<float>>& iq, std::vector<float>& audio) {
+    // Persists across calls (block boundaries) for phase continuity — same
+    // static-state convention already used by the filters/EQ below.
+    static std::complex<float> prev = {1.0f, 0.0f};
+    audio.resize(iq.size());
+    for (size_t i = 0; i < iq.size(); ++i) {
+        const std::complex<float>& cur = iq[i];
+        // arg(cur * conj(prev)) without an actual complex multiply/atan2 call:
+        float re = cur.real()*prev.real() + cur.imag()*prev.imag();
+        float im = cur.imag()*prev.real() - cur.real()*prev.imag();
+        audio[i] = std::atan2(im, re) * (1.0f / (float)M_PI); // normalize to ~[-1, 1]
+        prev = cur;
     }
 }
 
@@ -297,4 +341,49 @@ void processSSB_opt(std::vector<std::complex<float>> iq, uint32_t sampleRate,
 
 bool lastBlockContainsPulse() {
     return demod_lastPulseDetected;
+}
+
+// ------------------------------
+// 12) Full Wide FM pipeline (two-way-radio style, ~25-35kHz channel)
+// ------------------------------
+void processFM_opt(std::vector<std::complex<float>> iq, uint32_t sampleRate,
+                    std::vector<int16_t> &pcmOut, int mode) {
+    static std::vector<float> audio;
+    audio.resize(iq.size());
+
+    // Volume mode still applies to output gain (mute is handled by the Kotlin
+    // side stopping playback entirely, so its gain value here doesn't matter).
+    float gain = 3.0f;
+    if (mode == 2) gain = 4.5f; // loud
+
+    // --- 1) DC removal
+    removeDC(iq, 0.9995f);
+
+    // --- 2) Wide complex lowpass (~17.5kHz half-bandwidth => ~35kHz channel).
+    // Must preserve I/Q (iir2ProcessComplex), not the real-only iir2Process
+    // the SSB path uses — an FM discriminator needs the true phase relationship.
+    static IIR2Complex rfFilterFM;
+    static bool rfFmInit = false;
+    if (!rfFmInit) { iir2InitLowpassComplex(rfFilterFM, (float)sampleRate, 17500.0f, 0.707f); rfFmInit = true; }
+    iir2ProcessComplex(rfFilterFM, iq);
+
+    // --- 3) FM discriminator
+    demodFM(iq, audio);
+
+    // --- 4) AGC (gentler attack than the SSB path to avoid pumping on voice)
+    adaptiveAGC(audio, 0.35f, 0.01f, 0.0005f);
+
+    // --- 5) Décimation vers ~48 kHz
+    int decim = std::max(1, static_cast<int>(sampleRate / 48000.0f));
+    auto audio48k = simpleFIRDecimate(audio, decim, 0.45f);
+
+    // --- 6) Gentle conditioning only: just remove DC/rumble below 300Hz.
+    // No CW-tuned bandpass/transient-boost here (those emphasize narrow
+    // "click" character for beacon detection, not natural voice).
+    static Biquad hpFM; static bool eqFmInit = false;
+    if (!eqFmInit) { biquadInitHighpass(hpFM, 48000.0f, 300.0f, 0.7f); eqFmInit = true; }
+    if (!audio48k.empty()) biquadProcess(hpFM, audio48k);
+
+    // --- 7) Conversion PCM
+    pcmOut = floatToPCM(audio48k, gain);
 }

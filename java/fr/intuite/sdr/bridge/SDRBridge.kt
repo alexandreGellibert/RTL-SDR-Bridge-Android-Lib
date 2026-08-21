@@ -208,6 +208,13 @@ object SDRBridge  {
      */
     external fun setSoundMode(soundMode: Int)
 
+    /**
+     * Demod mode: 0 = narrow SSB/CW phasing demod (default, used for beacon/pulse
+     * tracking), 1 = wide FM discriminator (two-way-radio "Wide FM" style, for
+     * intelligible voice from fox-hunt transmitters etc.)
+     */
+    external fun setDemodMode(demodMode: Int)
+
     external fun getAmbientAudioEnergy(): Float
 
     external fun getCurrentAudioRatio(): Float
